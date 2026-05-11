@@ -1,4 +1,5 @@
-name: CI
+# wind-cli CI/CD Pipeline
+# Targets: Linux, macOS (x86_64 + ARM64), Windows; Linux musl static build
 
 on:
   push:
