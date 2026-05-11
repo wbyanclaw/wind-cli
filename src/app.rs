@@ -134,7 +134,7 @@ fn cmd_put(
     } else if let Some(src) = file {
         std::fs::read(src).map_err(|e| WindError::PermissionDenied(e.to_string()))?
     } else {
-	        return Err(WindError::Usage("put requires either --stdin or --file".to_string())).into());
+	        return Err(WindError::Usage("put requires either --stdin or --file".to_string()).into());
     };
 
     workspace::put(&safe, &content)?;
