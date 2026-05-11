@@ -7,7 +7,6 @@
 //! P0: only parse/validate, do NOT execute external programs
 
 use crate::errors::WindError;
-use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 // =============================================================================
@@ -79,15 +78,33 @@ pub fn parse(uri: &str) -> anyhow::Result<WindAction> {
         .ok_or_else(|| WindError::MissingParam("action parameters".to_string()))?;
 
     match action_type {
-        "page" => Ok(WindAction::Page {
-            kind: parse_page_action(params)?,
-            target: parse_page_target(params)?,
-        }),
-        "command" => Ok(WindAction::Command {
-            id: parse_command_action(params)?,
-        }),
+        "page" => {
+            reject_unknown_params(params, &["kind", "target"])?;
+            Ok(WindAction::Page {
+                kind: parse_page_action(params)?,
+                target: parse_page_target(params)?,
+            })
+        }
+        "command" => {
+            reject_unknown_params(params, &["id"])?;
+            Ok(WindAction::Command {
+                id: parse_command_action(params)?,
+            })
+        }
         other => Err(WindError::InvalidActionType).map_err(Into::into),
     }
+}
+
+fn reject_unknown_params(params: &str, allowed: &[&str]) -> Result<(), WindError> {
+    for pair in params.split('&') {
+        let (key, _) = pair
+            .split_once('=')
+            .ok_or_else(|| WindError::MissingParam(pair.to_string()))?;
+        if !allowed.contains(&key) {
+            return Err(WindError::UnknownParam(key.to_string()));
+        }
+    }
+    Ok(())
 }
 
 fn parse_page_action(params: &str) -> Result<PageKind, WindError> {

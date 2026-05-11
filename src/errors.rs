@@ -60,6 +60,10 @@ pub const ERR_NETWORK_FAILED: &str = "NETWORK_FAILED";
 pub const ERR_UPGRADE_SOURCE_UNREACHABLE: &str = "UPGRADE_SOURCE_UNREACHABLE";
 pub const ERR_UPGRADE_RESPONSE_INVALID: &str = "UPGRADE_RESPONSE_INVALID";
 
+// Generic fallback errors
+pub const ERR_GENERAL: &str = "GENERAL_ERROR";
+pub const ERR_IO: &str = "IO_ERROR";
+
 // =============================================================================
 // Error types
 // =============================================================================
@@ -229,10 +233,6 @@ impl WindError {
     }
 }
 
-// Stable error code string for generic errors
-const ERR_GENERAL: &str = "GENERAL_ERROR";
-const ERR_IO: &str = "IO_ERROR";
-
 // =============================================================================
 // Structured error output
 // =============================================================================
@@ -245,7 +245,9 @@ pub struct ErrorOutput {
 
 #[derive(Serialize, Debug)]
 pub struct ErrorDetail {
+    #[serde(rename = "error_code")]
     pub code: String,
+    #[serde(rename = "exitCode")]
     pub exit_code: i32,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]

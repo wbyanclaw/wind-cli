@@ -2,47 +2,107 @@
 
 use crate::errors::WindError;
 use std::fs;
+use std::path::Component;
 use std::path::{Path, PathBuf};
+
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 
 /// Validate and resolve a path against workspace root (P0: no-follow symlink)
 pub fn safe_path(workspace_root: &Path, user_path: &Path) -> anyhow::Result<PathBuf> {
-    // Reject absolute paths
+    resolve_workspace_path(workspace_root, user_path, true)
+}
+
+/// Validate a workspace path whose final component may not exist yet.
+pub fn safe_path_for_create(workspace_root: &Path, user_path: &Path) -> anyhow::Result<PathBuf> {
+    resolve_workspace_path(workspace_root, user_path, false)
+}
+
+fn resolve_workspace_path(
+    workspace_root: &Path,
+    user_path: &Path,
+    must_exist: bool,
+) -> anyhow::Result<PathBuf> {
     if user_path.is_absolute() {
         return Err(WindError::PathTraversal.into());
     }
 
-    // Reject symlinks in any component (P0 no-follow)
-    if has_symlink_component(user_path) {
-        return Err(WindError::SymlinkNotSupported.into());
-    }
-
-    // Resolve and canonicalize the user path relative to workspace root
-    let joined = workspace_root.join(user_path);
-    let canonical = joined
-        .canonicalize()
-        .map_err(|_| WindError::PathNotFound(user_path.display().to_string()))?;
-
-    // Ensure result is still inside workspace root
     let root_canonical = workspace_root
         .canonicalize()
-        .unwrap_or_else(|_| workspace_root.to_path_buf());
+        .map_err(|_| WindError::PathNotFound(workspace_root.display().to_string()))?;
 
-    if !canonical.starts_with(&root_canonical) {
-        return Err(WindError::PathOutsideWorkspace(user_path.display().to_string()).into());
+    let mut current = root_canonical.clone();
+    let components: Vec<_> = user_path.components().collect();
+    let mut saw_normal = false;
+
+    for (index, component) in components.iter().enumerate() {
+        match component {
+            Component::CurDir => continue,
+            Component::Normal(part) => {
+                saw_normal = true;
+                current.push(part);
+            }
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(WindError::PathTraversal.into());
+            }
+        }
+
+        let is_last = index == components.len() - 1;
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) => {
+                if is_symlink_like(&metadata) {
+                    return Err(WindError::SymlinkNotSupported.into());
+                }
+                if !is_last && !metadata.is_dir() {
+                    return Err(WindError::PathIsNotDir(current.display().to_string()).into());
+                }
+            }
+            Err(_) if must_exist || !is_last => {
+                return Err(WindError::PathNotFound(current.display().to_string()).into());
+            }
+            Err(_) => {}
+        }
     }
 
-    Ok(canonical)
+    if !saw_normal {
+        return Ok(root_canonical);
+    }
+
+    if current.exists() {
+        let canonical = current
+            .canonicalize()
+            .map_err(|_| WindError::PathNotFound(current.display().to_string()))?;
+        if !canonical.starts_with(&root_canonical) {
+            return Err(WindError::PathOutsideWorkspace(user_path.display().to_string()).into());
+        }
+        Ok(canonical)
+    } else {
+        let parent = current
+            .parent()
+            .ok_or_else(|| WindError::PathTraversal)?;
+        let parent_canonical = parent
+            .canonicalize()
+            .map_err(|_| WindError::PathNotFound(parent.display().to_string()))?;
+        if !parent_canonical.starts_with(&root_canonical) {
+            return Err(WindError::PathOutsideWorkspace(user_path.display().to_string()).into());
+        }
+        Ok(current)
+    }
 }
 
-/// Check if any component of the path is a symlink (no-follow P0 strategy)
-fn has_symlink_component(path: &Path) -> bool {
-    let mut current = PathBuf::new();
-    for component in path.components() {
-        current.push(component);
-        if current.is_symlink() {
+fn is_symlink_like(metadata: &fs::Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+
+    #[cfg(windows)]
+    {
+        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0400;
+        if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
             return true;
         }
     }
+
     false
 }
 
@@ -58,9 +118,10 @@ pub fn ls(path: &Path) -> anyhow::Result<Vec<serde_json::Value>> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let file_type = entry.file_type()?;
+        let metadata = fs::symlink_metadata(entry.path())?;
+        let file_type = metadata.file_type();
         let name = entry.file_name().to_string_lossy().to_string();
-        let is_symlink = entry.path().is_symlink();
+        let is_symlink = is_symlink_like(&metadata);
 
         entries.push(serde_json::json!({
             "name": name,
@@ -86,11 +147,11 @@ pub fn cat(path: &Path, size_limit: u64) -> anyhow::Result<String> {
     if path.is_dir() {
         return Err(WindError::PathIsDir(path.display().to_string()).into());
     }
-    if path.is_symlink() {
+    let metadata = fs::symlink_metadata(path)?;
+    if is_symlink_like(&metadata) {
         return Err(WindError::SymlinkNotSupported.into());
     }
 
-    let metadata = fs::metadata(path)?;
     if metadata.len() > size_limit {
         return Err(WindError::FileTooLarge {
             limit: size_limit,
@@ -151,7 +212,8 @@ pub fn mkdir(path: &Path) -> anyhow::Result<()> {
 
 /// Remove a file or directory
 pub fn rm(path: &Path, recursive: bool, yes: bool, dry_run: bool) -> anyhow::Result<()> {
-    if path.is_symlink() {
+    let metadata = fs::symlink_metadata(path)?;
+    if is_symlink_like(&metadata) {
         return Err(WindError::SymlinkNotSupported.into());
     }
 
@@ -161,9 +223,9 @@ pub fn rm(path: &Path, recursive: bool, yes: bool, dry_run: bool) -> anyhow::Res
         if !is_empty && (!recursive || !yes) {
             return Err(WindError::DirNotEmpty(path.display().to_string()).into());
         }
-        if !yes {
+        if recursive && !yes {
             return Err(WindError::Usage(
-                "directory not empty: use --recursive --yes to confirm deletion".to_string(),
+                "recursive directory deletion requires --yes".to_string(),
             )
             .into());
         }

@@ -4,6 +4,7 @@ use crate::cli::{Cli, Command};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
 use crate::{workspace, windlocal};
+use std::path::Path;
 use std::path::PathBuf;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
@@ -126,7 +127,7 @@ fn cmd_put(
     file: Option<&PathBuf>,
 ) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path(&root, path)?;
+    let safe = workspace::safe_path_for_create(&root, path)?;
 
     let content = if stdin {
         // Read from stdin until EOF
@@ -153,7 +154,7 @@ fn cmd_put(
 
 fn cmd_mkdir(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path(&root, path)?;
+    let safe = workspace::safe_path_for_create(&root, path)?;
     workspace::mkdir(&safe)?;
     Ok(serde_json::json!({
         "ok": true,
@@ -168,6 +169,11 @@ fn cmd_rm(
     yes: bool,
     dry_run: bool,
 ) -> anyhow::Result<serde_json::Value> {
+    let path_text = path.to_string_lossy();
+    if path_text.contains('*') || path_text.contains('?') || path_text.contains('[') {
+        return Err(WindError::GlobNotAllowed.into());
+    }
+
     let root = get_workspace_root()?;
     let safe = workspace::safe_path(&root, path)?;
 
@@ -192,6 +198,10 @@ fn cmd_open(uri: &str) -> anyhow::Result<serde_json::Value> {
     // P0: only parse/validate, do not execute external actions
     let action = windlocal::parse(uri)?;
     windlocal::validate(&action)?;
+    if let windlocal::WindAction::Page { target, .. } = &action {
+        let root = get_workspace_root()?;
+        let _ = workspace::safe_path(&root, Path::new(target))?;
+    }
 
     let action_json = windlocal::action_to_json(&action);
     Ok(serde_json::json!({
@@ -202,11 +212,14 @@ fn cmd_open(uri: &str) -> anyhow::Result<serde_json::Value> {
 }
 
 fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
+    if !check {
+        return Err(WindError::Usage("upgrade P0 only supports --check".to_string()).into());
+    }
     // P0: only check version, no actual binary replacement
     let current = env!("CARGO_PKG_VERSION");
     Ok(serde_json::json!({
         "ok": true,
         "current_version": current,
-        "message": "upgrade check — full self-update is out of P0 scope"
+        "message": "upgrade check: this version can report available updates; automatic self-update is not available in this release"
     }))
 }

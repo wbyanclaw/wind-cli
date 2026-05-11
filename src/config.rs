@@ -1,8 +1,9 @@
 //! Configuration and standard platform paths
 
+use crate::errors::WindError;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// wind config schema
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,8 +52,10 @@ pub fn config_path() -> anyhow::Result<PathBuf> {
     if let Some(proj) = ProjectDirs::from("com", "wind", "wind") {
         Ok(proj.config_dir().join("config.json"))
     } else {
-        // Fallback
-        Ok(PathBuf::from("./wind.config.json"))
+        Err(WindError::ConfigPathUnwritable(
+            "unable to determine platform config directory".to_string(),
+        )
+        .into())
     }
 }
 
@@ -61,7 +64,7 @@ pub fn get_workspace_root() -> anyhow::Result<PathBuf> {
     let config = Config::load()?;
     config
         .active_workspace
-        .ok_or_else(|| anyhow::anyhow!("no active workspace; run 'wind init' first"))
+        .ok_or_else(|| WindError::NoActiveWorkspace.into())
 }
 
 /// Workspace data directory
@@ -69,6 +72,9 @@ pub fn workspace_data_dir() -> anyhow::Result<PathBuf> {
     if let Some(proj) = ProjectDirs::from("com", "wind", "wind") {
         Ok(proj.data_dir().to_path_buf())
     } else {
-        Ok(PathBuf::from("./wind.data"))
+        Err(WindError::ConfigPathUnwritable(
+            "unable to determine platform data directory".to_string(),
+        )
+        .into())
     }
 }

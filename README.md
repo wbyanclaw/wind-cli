@@ -31,6 +31,7 @@ wind upgrade --check              # 检查更新（不替换二进制）
 - `put` 使用目标同目录临时文件 + rename；跨分区无法原子则失败
 - `rm` 对目录/非空目录强制 `--recursive --yes`
 - `wind open` P0 只做 parse/validate，不执行任意外部程序
+- `platform::open_uri` 是预留边界；P0 不调用系统打开动作
 - 任意 `Platform::launch(cmd)` 在 P0 中禁用
 
 ## windlocal URI Grammar
@@ -60,7 +61,7 @@ windlocal://command?id=show_workspace
 {
   "ok": false,
   "error": {
-    "code": "SYMLINK_NOT_SUPPORTED",
+    "error_code": "SYMLINK_NOT_SUPPORTED",
     "exitCode": 3,
     "message": "symlink paths are not supported in P0",
     "traceId": "..."
