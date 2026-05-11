@@ -219,7 +219,10 @@ pub fn rm(path: &Path, recursive: bool, yes: bool, dry_run: bool) -> anyhow::Res
 
     if path.is_dir() {
         // Check if directory is empty
-        let is_empty = path.read_dir().map(|mut i| i.next().is_none()).unwrap_or(true);
+        let is_empty = match path.read_dir() {
+            Ok(mut entries) => entries.next().is_none(),
+            Err(_) => false,
+        };
         if !is_empty && (!recursive || !yes) {
             return Err(WindError::DirNotEmpty(path.display().to_string()).into());
         }
