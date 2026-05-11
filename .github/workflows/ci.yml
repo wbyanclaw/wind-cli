@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Linux: standard build + test
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Build
+        run: cargo build --release
+      - name: Run tests
+        run: cargo test --all-targets
+
+  # Linux musl: static cross-compile target
+  linux-musl:
+    name: Linux musl (static)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default stable
+      - name: Add musl target
+        run: rustup target add x86_64-unknown-linux-musl
+      - name: Build static binary
+        run: cargo build --release --target x86_64-unknown-linux-musl
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-x86_64-unknown-linux-musl
+          path: target/x86_64-unknown-linux-musl/release/wind
+          retention-days: 7
+
+  # macOS x86_64
+  macos-x86_64:
+    name: macOS x86_64
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default stable
+      - name: Build
+        run: cargo build --release --target x86_64-apple-darwin
+      - name: Run tests
+        run: cargo test --all-targets
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-x86_64-apple-darwin
+          path: target/x86_64-apple-darwin/release/wind
+          retention-days: 7
+
+  # macOS ARM64
+  macos-arm64:
+    name: macOS ARM64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default stable
+      - name: Build
+        run: cargo build --release --target aarch64-apple-darwin
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-aarch64-apple-darwin
+          path: target/aarch64-apple-darwin/release/wind
+          retention-days: 7
+
+  # Windows x86_64
+  windows:
+    name: Windows x86_64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup default stable
+      - name: Build
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Run tests
+        run: cargo test --all-targets
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-x86_64-pc-windows-msvc.exe
+          path: target/x86_64-pc-windows-msvc/release/wind.exe
+          retention-days: 7
+
+  # Artifact verification
+  verify:
+    name: Verify Artifacts
+    needs: [linux-musl, macos-x86_64, macos-arm64, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - name: List artifacts
+        run: ls -lh artifacts/
+      - name: SHA256 checksums
+        run: |
+          cd artifacts/
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
