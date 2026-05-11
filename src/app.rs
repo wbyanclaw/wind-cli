@@ -3,7 +3,7 @@
 use crate::cli::{Cli, Command};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
-use crate::{workspace, windlocal};
+use crate::{windlocal, workspace};
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -15,11 +15,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Init { path } => cmd_init(path),
         Command::Ls { path } => cmd_ls(path),
         Command::Cat { path } => cmd_cat(path),
-        Command::Put {
-            path,
-            stdin,
-            file,
-        } => cmd_put(path, *stdin, file.as_ref()),
+        Command::Put { path, stdin, file } => cmd_put(path, *stdin, file.as_ref()),
         Command::Mkdir { path } => cmd_mkdir(path),
         Command::Rm {
             path,
@@ -138,10 +134,7 @@ fn cmd_put(
     } else if let Some(src) = file {
         std::fs::read(src).map_err(|e| WindError::PermissionDenied(e.to_string()))?
     } else {
-        return Err(WindError::Usage(
-            "put requires either --stdin or --file".to_string(),
-        )
-        .into());
+	        return Err(WindError::Usage("put requires either --stdin or --file".to_string())).into());
     };
 
     workspace::put(&safe, &content)?;

@@ -9,9 +9,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
-// =============================================================================
 // Exit codes (i32, compatible with Unix conventions)
-// =============================================================================
 pub const EXIT_SUCCESS: i32 = 0;
 pub const EXIT_GENERAL: i32 = 1;       // general error
 pub const EXIT_USAGE: i32 = 2;        // argument/usage error
@@ -21,9 +19,7 @@ pub const EXIT_IO: i32 = 5;            // IO/permission error
 pub const EXIT_PLATFORM: i32 = 6;      // platform/environment error
 pub const EXIT_NETWORK: i32 = 7;       // network/version check error
 
-// =============================================================================
 // Error code strings (stable, machine-readable)
-// =============================================================================
 
 // Workspace / path / file operations: 100-199
 pub const ERR_PATH_TRAVERSAL: &str = "PATH_TRAVERSAL";
@@ -182,8 +178,7 @@ impl WindError {
             Self::AtomicRenameFailed(_)
             | Self::FileTooLarge { .. }
             | Self::PermissionDenied(_)
-            | Self::DiskFull
-            | Self::GlobNotAllowed => EXIT_IO,
+            | Self::DiskFull | Self::GlobNotAllowed => EXIT_IO,
 
             Self::PlatformUnsupported(_)
             | Self::ConfigPathUnwritable(_)
