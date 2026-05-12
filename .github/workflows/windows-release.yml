@@ -1,0 +1,71 @@
+# Windows release build for wind-cli.
+# This workflow is intentionally separate from the full matrix CI so a Windows
+# release can be produced even when macOS runners are unavailable.
+
+name: Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows-release:
+    name: Build and test Windows x86_64
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: rustup default stable
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Run tests
+        run: cargo test --all-targets
+
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item target/x86_64-pc-windows-msvc/release/wind.exe dist/wind.exe
+          Compress-Archive -Path dist/wind.exe -DestinationPath dist/wind-windows-x86_64.zip -Force
+          Get-FileHash dist/wind.exe -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  wind.exe" } |
+            Set-Content dist/SHA256SUMS.txt
+          Get-FileHash dist/wind-windows-x86_64.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  wind-windows-x86_64.zip" } |
+            Add-Content dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wind-windows-x86_64
+          path: |
+            dist/wind.exe
+            dist/wind-windows-x86_64.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/wind.exe \
+            dist/wind-windows-x86_64.zip \
+            dist/SHA256SUMS.txt \
+            --title "wind ${GITHUB_REF_NAME} Windows" \
+            --notes-file docs/release-notes-windows.md
