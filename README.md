@@ -90,17 +90,21 @@ wind upgrade --check
 ## 常用命令
 
 ```bash
-wind version
-wind init [path]
-wind ls [path]
-wind cat <path>
-wind put <path> --stdin
-wind put <path> --file <local-source>
-wind mkdir <path>
-wind rm <path>
-wind rm <path> --recursive --yes
-wind rm <path> --dry-run
-wind upgrade --check
+wind version                           # 输出版本
+wind init [path]                       # 初始化 workspace
+wind ls [path]                         # 列文件
+wind cat <path>                        # 读取文件（≤10MB）
+wind put <path> --stdin                # 从 stdin 写文件
+wind put <path> --file <local-source>  # 从本地文件写
+wind mkdir <path>                      # 创建目录
+wind rm <path>                          # 删除文件/空目录
+wind rm <path> --recursive --yes       # 删除非空目录
+wind rm <path> --dry-run               # 预览删除
+wind open --file <path>                # 打开 workspace 文件
+wind open --search <query>            # 搜索 workspace 内容
+wind open --app                        # 打开应用视图
+wind open --settings                  # 打开设置视图
+wind upgrade --check                   # 检查更新（不替换二进制）
 
 # 给脚本或 AI Agent 使用结构化输出
 wind --json ls notes
