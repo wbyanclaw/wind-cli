@@ -37,23 +37,23 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item target/x86_64-pc-windows-msvc/release/wind.exe dist/wind.exe
-          Compress-Archive -Path dist/wind.exe -DestinationPath dist/wind-windows-x86_64.zip -Force
-          Get-FileHash dist/wind.exe -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash.ToLower())  wind.exe" } |
+          Copy-Item target/x86_64-pc-windows-msvc/release/windcli.exe dist/windcli.exe
+          Compress-Archive -Path dist/windcli.exe -DestinationPath dist/windcli-windows-x86_64.zip -Force
+          Get-FileHash dist/windcli.exe -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  windcli.exe" } |
             Set-Content dist/SHA256SUMS.txt
-          Get-FileHash dist/wind-windows-x86_64.zip -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash.ToLower())  wind-windows-x86_64.zip" } |
+          Get-FileHash dist/windcli-windows-x86_64.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  windcli-windows-x86_64.zip" } |
             Add-Content dist/SHA256SUMS.txt
           Get-Content dist/SHA256SUMS.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wind-windows-x86_64
+          name: windcli-windows-x86_64
           path: |
-            dist/wind.exe
-            dist/wind-windows-x86_64.zip
+            dist/windcli.exe
+            dist/windcli-windows-x86_64.zip
             dist/SHA256SUMS.txt
           retention-days: 14
 
@@ -64,8 +64,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            dist/wind.exe \
-            dist/wind-windows-x86_64.zip \
+            dist/windcli.exe \
+            dist/windcli-windows-x86_64.zip \
             dist/SHA256SUMS.txt \
-            --title "wind ${GITHUB_REF_NAME} Windows" \
+            --title "windcli ${GITHUB_REF_NAME} Windows" \
             --notes-file docs/release-notes-windows.md
