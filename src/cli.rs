@@ -1,15 +1,24 @@
 //! CLI argument definitions — clap only, no business logic
+//!
+//! This CLI is designed to be AI-agent friendly with intuitive commands.
 
-use clap::{Parser, Subcommand};
+use clap::{Command, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(
     name = "windcli",
-    about = "windcli CLI — 受控 workspace 文件管理",
-    version
+    about = "A safe file workspace CLI for AI agents",
+    version,
+    after_help = "Examples:
+  windcli init ~/workspace
+  echo 'hello' | windcli write notes/todo.md
+  windcli read notes/todo.md
+  windcli list notes
+  windcli mkdir docs
+  windcli delete notes/todo.md"
 )]
 pub struct Cli {
-    /// Enable JSON output
+    /// Enable JSON output (machine-readable)
     #[arg(long, short)]
     pub json: bool,
 
@@ -23,94 +32,100 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
-    /// 输出版本信息
-    Version,
-
-    /// 初始化 workspace
+    /// Create or switch to a workspace directory
     Init {
-        /// workspace 路径，默认当前目录
+        /// Workspace path (default: current directory)
         #[arg(default_value = ".")]
         path: std::path::PathBuf,
     },
 
-    /// 列文件
+    /// List files in workspace
     Ls {
-        /// 要列出的路径，默认 workspace 根目录
+        /// Path to list (default: workspace root)
         #[arg(default_value = ".")]
         path: std::path::PathBuf,
     },
 
-    /// 读取文件内容
-    Cat {
-        /// 文件路径
+    /// Read file content (max 10MB)
+    Read {
+        /// File path to read
         path: std::path::PathBuf,
     },
 
-    /// 写文件（支持 stdin 或 --file）
-    Put {
-        /// 目标路径
+    /// Write content to a file (use --stdin or --content)
+    Write {
+        /// Destination file path
         path: std::path::PathBuf,
 
-        /// 从 stdin 读取内容
+        /// Read content from stdin
         #[arg(long, short = 's')]
         stdin: bool,
 
-        /// 从指定本地文件读取内容
-        #[arg(long, short = 'f')]
-        file: Option<std::path::PathBuf>,
+        /// Content to write directly (alternative to --stdin)
+        #[arg(long, short = 'c')]
+        content: Option<String>,
     },
 
-    /// 创建目录
+    /// Create a directory
     Mkdir {
-        /// 目录路径
+        /// Directory path to create
         path: std::path::PathBuf,
     },
 
-    /// 删除文件或目录
-    Rm {
-        /// 目标路径
+    /// Delete a file or directory
+    Delete {
+        /// Path to delete
         path: std::path::PathBuf,
 
-        /// 递归删除目录
+        /// Delete directory and all contents
         #[arg(long, short = 'r')]
         recursive: bool,
 
-        /// 确认删除（必须指定才执行）
+        /// Skip confirmation
         #[arg(long, short = 'y')]
         yes: bool,
 
-        /// 预览将要删除的对象，不实际删除
+        /// Show what would be deleted without deleting
         #[arg(long)]
         dry_run: bool,
     },
 
-    /// 打开文件或应用（内部使用 windlocal 协议封装）
-    Open {
-        /// 打开 workspace 内的文件
-        #[arg(long, short = 'f')]
-        file: Option<std::path::PathBuf>,
-
-        /// 在 workspace 内搜索
-        #[arg(long, short = 's')]
-        search: Option<String>,
-
-        /// 打开应用视图
-        #[arg(long)]
-        app: bool,
-
-        /// 打开设置视图
-        #[arg(long)]
-        settings: bool,
-    },
-
-    /// 检查更新（不实际替换二进制）
+    /// Check for updates
     Upgrade {
-        /// 仅检查，不下载
+        /// Only check, do not download
         #[arg(long)]
         check: bool,
     },
+
+    /// Show version information
+    Version,
 }
 
+// Aliases for backward compatibility
 pub fn build() -> Cli {
-    Cli::parse()
+    let args: Vec<String> = std::env::args().collect();
+    let args = normalize_args(&args);
+    Cli::parse_from(args)
+}
+
+/// Normalize AI-friendly command aliases
+fn normalize_args(args: &[String]) -> Vec<String> {
+    let mut result = vec![args[0].clone()];
+    let mut i = 1;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            // Alias: cat -> read
+            "cat" => result.push("read".to_string()),
+            // Alias: put -> write
+            "put" => result.push("write".to_string()),
+            // Alias: rm -> delete
+            "rm" => result.push("delete".to_string()),
+            // Keep other args as-is
+            arg => result.push(arg.to_string()),
+        }
+        i += 1;
+    }
+
+    result
 }

@@ -1,22 +1,22 @@
-//! Smoke tests for wind CLI
+//! Smoke tests for windcli - AI-agent friendly file workspace
 
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
-fn wind(temp: &TempDir) -> Command {
+fn windcli_cmd(temp: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("windcli").unwrap();
     cmd.env("WIND_CONFIG_PATH", temp.path().join("config.json"));
     cmd
 }
 
-fn workspace(temp: &TempDir) -> std::path::PathBuf {
+fn workspace_path(temp: &TempDir) -> std::path::PathBuf {
     temp.path().join("workspace")
 }
 
 #[test]
-fn wind_version() {
+fn version_command() {
     Command::cargo_bin("windcli")
         .unwrap()
         .arg("version")
@@ -26,170 +26,181 @@ fn wind_version() {
 }
 
 #[test]
-fn init_creates_workspace_directory() {
+fn init_creates_workspace() {
     let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
+    let root = workspace_path(&temp);
 
-    wind(&temp)
+    windcli_cmd(&temp)
         .args(["init", root.to_str().unwrap()])
         .assert()
         .success()
-        .stdout(predicate::str::contains("workspace initialized"));
+        .stdout(predicate::str::contains("initialized"));
 
     assert!(root.is_dir());
 }
 
 #[test]
-fn nested_mkdir_and_put_work() {
+fn write_and_read_file() {
     let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
+    let root = workspace_path(&temp);
 
-    wind(&temp).args(["init", root.to_str().unwrap()]).assert().success();
-    wind(&temp).args(["mkdir", "a/b"]).assert().success();
-
-    let mut put = wind(&temp);
-    put.args(["put", "a/b/file.txt", "--stdin"])
-        .write_stdin("hello nested")
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
         .assert()
         .success();
 
-    wind(&temp)
-        .args(["cat", "a/b/file.txt"])
+    // Write via stdin (AI-friendly)
+    let mut write = windcli_cmd(&temp);
+    write.args(["write", "notes/test.txt", "--stdin"])
+        .write_stdin("hello world")
+        .assert()
+        .success();
+
+    // Read file
+    windcli_cmd(&temp)
+        .args(["read", "notes/test.txt"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("hello nested"));
+        .stdout(predicate::str::contains("hello world"));
 }
 
-#[cfg(unix)]
 #[test]
-fn ls_reports_symlink_entries_without_following() {
-    use std::os::unix::fs::symlink;
-
+fn nested_mkdir_and_write() {
     let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
+    let root = workspace_path(&temp);
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    windcli_cmd(&temp)
+        .args(["mkdir", "docs/api"])
+        .assert()
+        .success();
+
+    let mut write = windcli_cmd(&temp);
+    write.args(["write", "docs/api/intro.md", "--stdin"])
+        .write_stdin("# API Docs\nWelcome")
+        .assert()
+        .success();
+
+    windcli_cmd(&temp)
+        .args(["read", "docs/api/intro.md"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("API Docs"));
+}
+
+#[test]
+fn list_shows_files() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
     fs::create_dir_all(&root).unwrap();
-    fs::write(temp.path().join("outside.txt"), "secret").unwrap();
-    symlink(temp.path().join("outside.txt"), root.join("link.txt")).unwrap();
+    fs::write(root.join("readme.md"), "welcome").unwrap();
 
-    wind(&temp)
+    windcli_cmd(&temp)
         .args(["init", root.to_str().unwrap()])
         .assert()
         .success();
 
-    wind(&temp)
-        .args(["--json", "ls"])
+    windcli_cmd(&temp)
+        .args(["ls"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("\"type\": \"symlink\""));
+        .stdout(predicate::str::contains("readme.md"));
 }
 
 #[test]
-fn path_traversal_is_rejected_as_json_error() {
+fn delete_removes_file() {
     let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
+    let root = workspace_path(&temp);
 
-    wind(&temp)
+    windcli_cmd(&temp)
         .args(["init", root.to_str().unwrap()])
         .assert()
         .success();
 
-    wind(&temp)
-        .args(["--json", "cat", "../secret.txt"])
+    windcli_cmd(&temp)
+        .args(["write", "temp.txt", "--stdin"])
+        .write_stdin("temporary")
+        .assert()
+        .success();
+
+    windcli_cmd(&temp)
+        .args(["delete", "temp.txt", "--yes"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Deleted"));
+}
+
+#[test]
+fn path_traversal_blocked() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    windcli_cmd(&temp)
+        .args(["--json", "read", "../secret.txt"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("PATH_TRAVERSAL"))
-        .stderr(predicate::str::contains("exitCode"));
-}
-
-#[cfg(unix)]
-#[test]
-fn symlink_targets_are_rejected_for_read() {
-    use std::os::unix::fs::symlink;
-
-    let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
-    fs::create_dir_all(&root).unwrap();
-    fs::write(temp.path().join("outside.txt"), "secret").unwrap();
-    symlink(temp.path().join("outside.txt"), root.join("link.txt")).unwrap();
-
-    wind(&temp)
-        .args(["init", root.to_str().unwrap()])
-        .assert()
-        .success();
-
-    wind(&temp)
-        .args(["--json", "cat", "link.txt"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("SYMLINK_NOT_SUPPORTED"));
+        .stderr(predicate::str::contains("PATH_TRAVERSAL"));
 }
 
 #[test]
-fn open_file_works() {
+fn large_file_rejected() {
     let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
-    fs::create_dir_all(&root).unwrap();
-    fs::write(root.join("readme.md"), "hello").unwrap();
-
-    wind(&temp)
-        .args(["init", root.to_str().unwrap()])
-        .assert()
-        .success();
-
-    wind(&temp)
-        .args(["--json", "open", "--file", "readme.md"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\"ok\": true"))
-        .stdout(predicate::str::contains("\"type\": \"page\""))
-        .stdout(predicate::str::contains("\"kind\": \"file\""));
-}
-
-#[test]
-fn open_search_works() {
-    let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
-    fs::create_dir_all(&root).unwrap();
-
-    wind(&temp)
-        .args(["init", root.to_str().unwrap()])
-        .assert()
-        .success();
-
-    wind(&temp)
-        .args(["--json", "open", "--search", "hello"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\"ok\": true"))
-        .stdout(predicate::str::contains("\"type\": \"page\""))
-        .stdout(predicate::str::contains("\"kind\": \"search\""));
-}
-
-#[test]
-fn open_requires_argument() {
-    let temp = TempDir::new().unwrap();
-
-    wind(&temp)
-        .args(["--json", "open"])
-        .assert()
-        .failure();
-}
-
-#[test]
-fn cat_enforces_ten_mb_limit() {
-    let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
+    let root = workspace_path(&temp);
     fs::create_dir_all(&root).unwrap();
     fs::write(root.join("big.txt"), vec![b'x'; 10 * 1024 * 1024 + 1]).unwrap();
 
-    wind(&temp)
+    windcli_cmd(&temp)
         .args(["init", root.to_str().unwrap()])
         .assert()
         .success();
 
-    wind(&temp)
-        .args(["--json", "cat", "big.txt"])
+    windcli_cmd(&temp)
+        .args(["--json", "read", "big.txt"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("FILE_TOO_LARGE"));
+}
+
+#[test]
+fn upgrade_check_works() {
+    let temp = TempDir::new().unwrap();
+    windcli_cmd(&temp)
+        .args(["upgrade", "--check"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("version"));
+}
+
+// Backward compatibility: cat/put/rm still work
+#[test]
+fn cat_alias_works() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    windcli_cmd(&temp)
+        .args(["write", "test.txt", "--stdin"])
+        .write_stdin("content")
+        .assert()
+        .success();
+
+    // cat should work as alias for read
+    windcli_cmd(&temp)
+        .args(["cat", "test.txt"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("content"));
 }

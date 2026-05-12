@@ -1,56 +1,97 @@
-# windcli
+# windcli - AI Agent File Workspace
 
-A controlled workspace CLI for AI agents and developers to safely manage local files.
+A safe file management CLI designed for AI agents. All operations are scoped to a controlled workspace directory.
 
-## Quick Setup (AI Agent)
+## Quick Start (Copy & Paste)
 
 ```bash
-# Download and run
-curl -L https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.6/windcli.exe -o windcli.exe
+# 1. Download
+curl -L https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.8/windcli.exe -o windcli.exe
 
-# Initialize workspace (one-time)
+# 2. Initialize workspace (run once)
 windcli.exe init C:\agent-workspace
 
-# Use from any directory
+# 3. Start using (any directory)
 cd C:\agent-workspace
-windcli.exe put notes/todo.md --stdin
-windcli.exe cat notes/todo.md
-windcli.exe ls notes
+echo "my notes" | windcli.exe write notes/todo.txt --stdin
+windcli.exe read notes/todo.txt
+windcli.exe list notes
 ```
 
-## Commands
+## Commands (AI-Friendly Names)
 
-| Command | Description |
-|---------|-------------|
-| `windcli init <path>` | Initialize/create workspace |
-| `windcli ls [path]` | List files |
-| `windcli cat <path>` | Read file (≤10MB) |
-| `windcli put <path> --stdin` | Write file from stdin |
-| `windcli mkdir <path>` | Create directory |
-| `windcli rm <path>` | Delete file |
-| `windcli rm <path> --recursive --yes` | Delete directory |
-| `windcli version` | Show version |
-| `windcli upgrade --check` | Check for updates |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `init <path>` | Create/switch workspace | `windcli init ~/workspace` |
+| `list [path]` | List files | `windcli list notes` |
+| `read <file>` | Read file content | `windcli read notes/todo.txt` |
+| `write <file> --stdin` | Write file from pipe | `echo "hello" \| windcli write notes/a.txt --stdin` |
+| `mkdir <path>` | Create directory | `windcli mkdir notes` |
+| `delete <path> --yes` | Delete file | `windcli delete notes/old.txt --yes` |
+| `delete <path> -r -y` | Delete directory | `windcli delete docs -r -y` |
+| `version` | Show version | `windcli version` |
+| `upgrade --check` | Check updates | `windcli upgrade --check` |
 
-## Security
+## AI Agent Patterns
+
+```bash
+# Write multiple files
+echo "content1" | windcli write project/file1.txt --stdin
+echo "content2" | windcli write project/file2.txt --stdin
+
+# Read and process
+windcli read data/input.txt
+windcli list results
+
+# Organize workspace
+windcli mkdir agent-tasks
+windcli mkdir agent-outputs
+windcli mkdir agent-logs
+```
+
+## Security Rules
 
 - All paths are relative to workspace root
-- No `..` path traversal allowed
-- No symlink following
-- 10MB file size limit for reads
+- No `..` path traversal (blocked)
+- No symlink following (blocked)
+- Max file read: 10MB
+- No glob/wildcard in delete
 
-## Windows Quick Start
+## Error Messages (Helpful)
+
+Errors include suggestions:
+```
+ERROR: Path traversal attempt. Paths must be within workspace.
+ERROR: File too large (max 10MB). Use streaming for larger files.
+ERROR: Workspace not initialized. Run: windcli init <path>
+```
+
+## Windows PowerShell
 
 ```powershell
 # Download
-Invoke-WebRequest -Uri "https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.6/windcli.exe" -OutFile "windcli.exe"
+Invoke-WebRequest -Uri "https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.8/windcli.exe" -OutFile "windcli.exe"
 
-# Initialize workspace
-.\windcli.exe init $env:USERPROFILE\wind-workspace
+# Use
+.\windcli init $env:USERPROFILE\agent-workspace
+"hello" | .\windcli write notes\test.txt --stdin
+.\windcli read notes\test.txt
+```
 
-# Write and read files
-"hello world" | .\windcli.exe put notes\test.txt --stdin
-.\windcli.exe cat notes\test.txt
+## JSON Output (For Scripts)
+
+Add `--json` flag for machine-readable output:
+```bash
+windcli --json read notes/todo.txt
+```
+Returns:
+```json
+{
+  "ok": true,
+  "file": "notes/todo.txt",
+  "size_bytes": 12,
+  "content": "hello world"
+}
 ```
 
 ## Installation from Source
@@ -59,13 +100,5 @@ Invoke-WebRequest -Uri "https://github.com/wbyanclaw/wind-cli/releases/download/
 git clone git@github.com:wbyanclaw/wind-cli.git
 cd wind-cli
 cargo build --release
-./target/release/windcli.exe version
+./target/release/windcli version
 ```
-
-## Architecture
-
-- `src/cli.rs` — CLI argument definitions
-- `src/app.rs` — Command handlers
-- `src/workspace/` — Safe file operations
-- `src/config.rs` — Workspace configuration
-- `src/errors.rs` — Error codes and messages
