@@ -29,10 +29,10 @@ cargo --version
 git clone git@github.com:wbyanclaw/wind-cli.git
 cd wind-cli
 cargo install --path .
-wind version
+windcli version
 ```
 
-`cargo install --path .` 默认把二进制安装到 `~/.cargo/bin`。如果系统找不到 `wind`，把 Cargo bin 加到 `PATH`：
+`cargo install --path .` 默认把二进制安装到 `~/.cargo/bin`。如果系统找不到 `windcli`，把 Cargo bin 加到 `PATH`：
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -48,75 +48,71 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 ```bash
 # 1. 创建或选择一个 active workspace
-wind init ~/my-workspace
+windcli init ~/my-workspace
 
 # 后续命令里的路径都相对这个 workspace，不是相对当前 shell 目录
 
 # 2. 在 workspace 内写入文件
-printf "hello wind\n" | wind put notes/hello.md --stdin
+printf "hello wind\n" | windcli put notes/hello.md --stdin
 
 # 3. 查看和读取文件
-wind ls notes
-wind cat notes/hello.md
+windcli ls notes
+windcli cat notes/hello.md
 ```
 
 ## 5 分钟完整示例
 
 ```bash
 # 初始化 workspace；目录不存在时会创建
-wind init ~/my-workspace
+windcli init ~/my-workspace
 
 # 创建嵌套目录
-wind mkdir docs/getting-started
+windcli mkdir docs/getting-started
 
 # 从 stdin 写入多行文本
-cat <<'EOF' | wind put docs/getting-started/intro.md --stdin
+cat <<'EOF' | windcli put docs/getting-started/intro.md --stdin
 # Intro
 
-This file was created through wind.
+This file was created through windcli.
 EOF
 
 # 浏览和读取
-wind ls docs/getting-started
-wind cat docs/getting-started/intro.md
+windcli ls docs/getting-started
+windcli cat docs/getting-started/intro.md
 
 # 给脚本/Agent 使用 JSON 输出
-wind --json ls docs/getting-started
+windcli --json ls docs/getting-started
 
 # 检查更新能力；P0 不自动替换二进制
-wind upgrade --check
+windcli upgrade --check
 ```
 
 ## 常用命令
 
 ```bash
-wind version                           # 输出版本
-wind init [path]                       # 初始化 workspace
-wind ls [path]                         # 列文件
-wind cat <path>                        # 读取文件（≤10MB）
-wind put <path> --stdin                # 从 stdin 写文件
-wind put <path> --file <local-source>  # 从本地文件写
-wind mkdir <path>                      # 创建目录
-wind rm <path>                          # 删除文件/空目录
-wind rm <path> --recursive --yes       # 删除非空目录
-wind rm <path> --dry-run               # 预览删除
-wind open --file <path>                # 打开 workspace 文件
-wind open --search <query>            # 搜索 workspace 内容
-wind open --app                        # 打开应用视图
-wind open --settings                  # 打开设置视图
-wind upgrade --check                   # 检查更新（不替换二进制）
+windcli version
+windcli init [path]
+windcli ls [path]
+windcli cat <path>
+windcli put <path> --stdin
+windcli put <path> --file <local-source>
+windcli mkdir <path>
+windcli rm <path>
+windcli rm <path> --recursive --yes
+windcli rm <path> --dry-run
+windcli upgrade --check
 
 # 给脚本或 AI Agent 使用结构化输出
-wind --json ls notes
+windcli --json ls notes
 ```
 
 ## Workspace 模型
 
 P0 只支持一个 active workspace。
 
-- `wind init [path]` 会创建目录、解析为 canonical path，并写入平台标准配置文件。
-- 对同一个路径重复执行 `wind init` 是幂等的。
-- 对不同路径执行 `wind init` 会失败并提示当前 active workspace；P0 不支持 `--switch`。
+- `windcli init [path]` 会创建目录、解析为 canonical path，并写入平台标准配置文件。
+- 对同一个路径重复执行 `windcli init` 是幂等的。
+- 对不同路径执行 `windcli init` 会失败并提示当前 active workspace；P0 不支持 `--switch`。
 - 文件命令只接受相对 workspace 的路径。
 
 ## 安全边界

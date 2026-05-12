@@ -22,7 +22,7 @@ fn wind_version() {
         .arg("version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("wind"));
+        .stdout(predicate::str::contains("windcli"));
 }
 
 #[test]
