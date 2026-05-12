@@ -42,7 +42,15 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 ### 二进制 Release
 
-当前还没有正式 release 下载。P0 阶段先支持源码安装；CI 已按 Linux musl、macOS x86_64/arm64、Windows MSVC 的矩阵准备后续二进制产物。
+下载最新版本：https://github.com/wbyanclaw/wind-cli/releases/latest
+
+Windows 用户推荐使用一键安装（无需手动配置 PATH）：
+
+```powershell
+irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 | iex
+```
+
+安装后直接使用 `wind` 命令，无需额外配置。
 
 ## 3 步快速开始
 

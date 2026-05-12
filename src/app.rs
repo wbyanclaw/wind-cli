@@ -22,7 +22,8 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             recursive,
             yes,
             dry_run,
-        } => cmd_rm(path, *recursive, *yes, *dry_run),
+            force,
+        } => cmd_rm(path, *recursive, *yes, *dry_run, *force),
         Command::Open {
             file,
             search,
@@ -188,11 +189,16 @@ fn cmd_rm(
     recursive: bool,
     yes: bool,
     dry_run: bool,
+    force: bool,
 ) -> anyhow::Result<serde_json::Value> {
     let path_text = path.to_string_lossy();
     if path_text.contains('*') || path_text.contains('?') || path_text.contains('[') {
         return Err(WindError::GlobNotAllowed.into());
     }
+
+    // --force is shorthand for --recursive --yes (AI Agent friendly)
+    let recursive = recursive || force;
+    let yes = yes || force;
 
     let root = get_workspace_root()?;
     let safe = workspace::safe_path(&root, path)?;

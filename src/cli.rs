@@ -71,17 +71,21 @@ pub enum Command {
         /// 目标路径
         path: std::path::PathBuf,
 
-        /// 递归删除目录
+        /// 递归删除（删除非空目录）
         #[arg(long, short = 'r')]
         recursive: bool,
 
-        /// 确认删除（必须指定才执行）
+        /// 确认删除（需配合 --recursive 使用）
         #[arg(long, short = 'y')]
         yes: bool,
 
         /// 预览将要删除的对象，不实际删除
         #[arg(long)]
         dry_run: bool,
+
+        /// 强制删除：等价于 --recursive --yes（AI Agent 推荐用法）
+        #[arg(long, short = 'f')]
+        force: bool,
     },
 
     /// 打开文件或应用（内部使用 windlocal 协议封装）
