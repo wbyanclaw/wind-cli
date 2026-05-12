@@ -64,7 +64,29 @@ fn cmd_init(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
         path.clone()
     };
 
-    let root = root.canonicalize().unwrap_or(root);
+    if root.exists() && !root.is_dir() {
+        return Err(WindError::InitFailed(format!(
+            "workspace path is not a directory: {}",
+            root.display()
+        ))
+        .into());
+    }
+
+    std::fs::create_dir_all(&root).map_err(|e| {
+        WindError::InitFailed(format!(
+            "unable to create workspace directory '{}': {}",
+            root.display(),
+            e
+        ))
+    })?;
+
+    let root = root.canonicalize().map_err(|e| {
+        WindError::InitFailed(format!(
+            "unable to resolve workspace directory '{}': {}",
+            root.display(),
+            e
+        ))
+    })?;
 
     let mut config = crate::config::Config::load()?;
     if let Some(existing) = &config.active_workspace {
@@ -134,7 +156,7 @@ fn cmd_put(
     } else if let Some(src) = file {
         std::fs::read(src).map_err(|e| WindError::PermissionDenied(e.to_string()))?
     } else {
-	        return Err(WindError::Usage("put requires either --stdin or --file".to_string()).into());
+        return Err(WindError::Usage("put requires either --stdin or --file".to_string()).into());
     };
 
     workspace::put(&safe, &content)?;

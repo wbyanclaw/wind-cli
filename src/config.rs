@@ -49,6 +49,10 @@ impl Config {
 
 /// Platform-standard config path
 pub fn config_path() -> anyhow::Result<PathBuf> {
+    if let Some(path) = std::env::var_os("WIND_CONFIG_PATH") {
+        return Ok(PathBuf::from(path));
+    }
+
     if let Some(proj) = ProjectDirs::from("com", "wind", "wind") {
         Ok(proj.config_dir().join("config.json"))
     } else {

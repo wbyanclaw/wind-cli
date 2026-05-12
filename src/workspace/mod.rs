@@ -1,4 +1,8 @@
-//! Workspace file operations — all paths go through safe_path()
+//! Workspace file operations.
+//!
+//! All user-provided paths must be resolved through `safe_path()` or
+//! `safe_path_for_create()` before touching the filesystem. P0 deliberately
+//! rejects symlink/reparse-point components instead of following them.
 
 use crate::errors::WindError;
 use std::fs;
@@ -8,12 +12,20 @@ use std::path::{Path, PathBuf};
 #[cfg(windows)]
 use std::os::windows::fs::MetadataExt;
 
-/// Validate and resolve a path against workspace root (P0: no-follow symlink)
+/// Resolve an existing workspace path.
+///
+/// This mode is used by read/delete/open operations. Every component must
+/// already exist, every existing component is checked without following
+/// symlinks, and the final canonical path must remain inside the workspace.
 pub fn safe_path(workspace_root: &Path, user_path: &Path) -> anyhow::Result<PathBuf> {
     resolve_workspace_path(workspace_root, user_path, true)
 }
 
-/// Validate a workspace path whose final component may not exist yet.
+/// Resolve a path that will be created inside the workspace.
+///
+/// Missing intermediate directories are allowed because `mkdir -p` and
+/// `put` intentionally create parents. Existing prefix components are still
+/// checked for symlinks/reparse points and non-directory files.
 pub fn safe_path_for_create(workspace_root: &Path, user_path: &Path) -> anyhow::Result<PathBuf> {
     resolve_workspace_path(workspace_root, user_path, false)
 }
@@ -57,8 +69,11 @@ fn resolve_workspace_path(
                     return Err(WindError::PathIsNotDir(current.display().to_string()).into());
                 }
             }
-            Err(_) if must_exist || !is_last => {
+            Err(_) if must_exist => {
                 return Err(WindError::PathNotFound(current.display().to_string()).into());
+            }
+            Err(_) if !is_last => {
+                continue;
             }
             Err(_) => {}
         }
@@ -77,13 +92,7 @@ fn resolve_workspace_path(
         }
         Ok(canonical)
     } else {
-        let parent = current
-            .parent()
-            .ok_or_else(|| WindError::PathTraversal)?;
-        let parent_canonical = parent
-            .canonicalize()
-            .map_err(|_| WindError::PathNotFound(parent.display().to_string()))?;
-        if !parent_canonical.starts_with(&root_canonical) {
+        if !current.starts_with(&root_canonical) {
             return Err(WindError::PathOutsideWorkspace(user_path.display().to_string()).into());
         }
         Ok(current)
@@ -163,7 +172,11 @@ pub fn cat(path: &Path, size_limit: u64) -> anyhow::Result<String> {
     fs::read_to_string(path).map_err(|e| WindError::PermissionDenied(e.to_string()).into())
 }
 
-/// Write a file using target-directory temp file + rename (atomic)
+/// Write a file using a target-directory temp file followed by rename.
+///
+/// Keeping the temp file beside the target avoids cross-filesystem rename
+/// fallback. If the OS still reports cross-device rename, P0 fails explicitly
+/// instead of degrading to copy/delete.
 pub fn put(path: &Path, content: &[u8]) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         if !parent.exists() {
@@ -190,9 +203,11 @@ pub fn put(path: &Path, content: &[u8]) -> anyhow::Result<()> {
             || e.raw_os_error() == Some(18 /* EXDEV on Linux */) => {
             // Cross-device rename failed: fail explicitly, do NOT fallback to copy+delete
             let _ = fs::remove_file(&temp_path);
-            Err(WindError::AtomicRenameFailed(
-                format!("cross-filesystem atomic rename not supported: {}", e)
-            ).into())
+            Err(WindError::AtomicRenameFailed(format!(
+                "cross-filesystem atomic rename not supported: {}",
+                e
+            ))
+            .into())
         }
         Err(e) => {
             let _ = fs::remove_file(&temp_path);
