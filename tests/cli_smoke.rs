@@ -166,15 +166,6 @@ fn open_search_works() {
 }
 
 #[test]
-fn open_requires_argument() {
-    let temp = TempDir::new().unwrap();
-
-    wind(&temp)
-        .args(["--json", "open"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("USAGE"));
-}
 
 #[test]
 fn cat_enforces_ten_mb_limit() {
@@ -193,4 +184,20 @@ fn cat_enforces_ten_mb_limit() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("FILE_TOO_LARGE"));
+}
+}
+
+#[test]
+fn open_requires_argument() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace(\&temp);
+    fs::create_dir_all(\&root).unwrap();
+
+    // Encapsulated open without args should fail with exit code 2
+    wind(\&temp)
+        .args(["--json", "open"])
+        .assert()
+        .failure()
+        .code(2)
+        .stderr(predicate::str::contains("usage"));
 }
