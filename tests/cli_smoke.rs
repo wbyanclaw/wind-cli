@@ -6,7 +6,7 @@ use std::fs;
 use tempfile::TempDir;
 
 fn wind(temp: &TempDir) -> Command {
-    let mut cmd = Command::cargo_bin("wind").unwrap();
+    let mut cmd = Command::cargo_bin("windcli").unwrap();
     cmd.env("WIND_CONFIG_PATH", temp.path().join("config.json"));
     cmd
 }
@@ -17,7 +17,7 @@ fn workspace(temp: &TempDir) -> std::path::PathBuf {
 
 #[test]
 fn wind_version() {
-    Command::cargo_bin("wind")
+    Command::cargo_bin("windcli")
         .unwrap()
         .arg("version")
         .assert()
