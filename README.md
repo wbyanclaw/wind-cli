@@ -1,10 +1,10 @@
-# wind CLI
+# windcli
 
-`wind` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
+`windcli` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
 
 ## 解决什么问题
 
-当你需要让自动化工具操作本地文件时，直接开放整个文件系统风险太高。`wind` 把能力收敛到一个 active workspace：
+当你需要让自动化工具操作本地文件时，直接开放整个文件系统风险太高。`windcli` 把能力收敛到一个 active workspace：
 
 - 开发者可以快速初始化一个本地 workspace，并用 CLI 管理其中的文件。
 - AI Agent / 脚本可以通过稳定命令和 `--json` 输出集成，而不是直接访问任意系统路径。
