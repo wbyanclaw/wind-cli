@@ -84,7 +84,7 @@ wind cat docs/getting-started/intro.md
 wind --json ls docs/getting-started
 
 # 校验 windlocal 链接；P0 只 parse/validate，不启动外部程序
-wind --json open 'windlocal://page?kind=file&target=docs/getting-started/intro.md'
+wind --json open file docs/getting-started/intro.md
 
 # 检查更新能力；P0 不自动替换二进制
 wind upgrade --check
@@ -103,7 +103,13 @@ wind mkdir <path>
 wind rm <path>
 wind rm <path> --recursive --yes
 wind rm <path> --dry-run
-wind open <windlocal-uri>
+wind open file <path>             # 打开 workspace 文件（windlocal 协议封装）
+wind open search <query>          # 搜索 workspace 内容
+wind open app <name>             # 打开 workspace 应用
+wind open settings               # 打开设置
+wind open show-workspace         # 显示 workspace 状态
+wind open show-settings          # 显示设置
+wind open check-upgrade          # 检查更新（等同于 upgrade --check）
 wind upgrade --check
 
 # 给脚本或 AI Agent 使用结构化输出
@@ -144,34 +150,30 @@ P0 是 no-follow，但 `ls` 允许展示 symlink 条目，方便用户理解 wor
 
 这个差异是刻意设计的：允许看见 symlink，但不允许通过 symlink 读写或逃逸 workspace。
 
-## windlocal 链接
+## windlocal 协议（内部实现，用户不可见）
 
-P0 的 `wind open` 只解析和校验 `windlocal://`，不执行 shell 命令，也不启动任意外部程序。
+`wind open` 的底层使用 windlocal URI 协议做安全校验，但用户只和 `wind open` 子命令交互，不需要了解 windlocal URI 格式。这是刻意的封装设计。
 
-支持的格式：
+`wind open` 子命令到 windlocal URI 的映射关系：
 
-```text
-windlocal://page?kind=file&target=docs/readme.md
-windlocal://command?id=show_workspace
-```
+| 用户命令 | 内部 windlocal URI |
+|---------|-------------------|
+| `wind open file <path>` | `windlocal://page?kind=file&target=<path>` |
+| `wind open search <query>` | `windlocal://page?kind=search&target=<query>` |
+| `wind open app <name>` | `windlocal://page?kind=app&target=<name>` |
+| `wind open settings` | `windlocal://page?kind=settings` |
+| `wind open show-workspace` | `windlocal://command?id=show_workspace` |
+| `wind open show-settings` | `windlocal://command?id=show_settings` |
+| `wind open check-upgrade` | `windlocal://command?id=check_upgrade` |
 
-允许的 page kind：
+P0 `wind open` 只解析和校验 windlocal URI，不执行 shell 命令，不启动任意外部程序。
 
-- `file`
-- `search`
-- `app`
-- `settings`
-
-允许的 command id：
-
-- `show_workspace`
-- `show_settings`
-- `check_upgrade`
-
-多余参数会被拒绝。比如下面这个命令会失败：
+额外参数会在 CLI 层被拒绝：
 
 ```bash
-wind open 'windlocal://page?kind=file&target=docs/readme.md&cmd=launch'
+# 额外参数 --cmd 会被 CLI 直接拒绝
+wind open file docs/readme.md --cmd launch
+# → error: unexpected argument '--cmd' found
 ```
 
 ## JSON 与错误输出

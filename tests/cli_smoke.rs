@@ -113,15 +113,13 @@ fn windlocal_rejects_unknown_params() {
         .assert()
         .success();
 
+    // Extra --cmd argument is rejected at CLI layer (unknown argument)
     wind(&temp)
-        .args([
-            "--json",
-            "open",
-            "windlocal://page?kind=file&target=docs/readme.md&cmd=launch",
-        ])
+        .args(["--json", "open", "file", "docs/readme.md", "--cmd", "launch"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("UNKNOWN_PARAM"));
+        .stderr(predicate::str::contains("unexpected")
+            .or(predicate::str::contains("argument")));
 }
 
 #[cfg(unix)]

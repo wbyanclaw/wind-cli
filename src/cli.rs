@@ -84,10 +84,15 @@ pub enum Command {
         dry_run: bool,
     },
 
-    /// 执行 windlocal 协议
+    /// 打开 workspace 内容（windlocal 协议封装入口，对用户隐藏 raw URI）
     Open {
-        /// windlocal URI
-        uri: String,
+        /// 操作类型：file / search / app / settings / show-workspace / show-settings / check-upgrade
+        #[arg(value_name = "OP")]
+        op: String,
+
+        /// 操作参数（路径、查询词等）
+        #[arg(required = false)]
+        arg: Option<String>,
     },
 
     /// 检查更新（不实际替换二进制）

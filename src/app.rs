@@ -23,7 +23,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             yes,
             dry_run,
         } => cmd_rm(path, *recursive, *yes, *dry_run),
-        Command::Open { uri } => cmd_open(uri),
+        Command::Open { op, arg } => cmd_open(op, arg.as_deref()),
         Command::Upgrade { check } => cmd_upgrade(*check),
     };
 
@@ -209,9 +209,33 @@ fn cmd_rm(
     }
 }
 
-fn cmd_open(uri: &str) -> anyhow::Result<serde_json::Value> {
+fn cmd_open(op: &str, arg: Option<&str>) -> anyhow::Result<serde_json::Value> {
     // P0: only parse/validate, do not execute external actions
-    let action = windlocal::parse(uri)?;
+    // Encapsulated interface — no raw windlocal:// URI exposed to user
+    let uri = match (op, arg) {
+        ("file", Some(target)) => {
+            format!("windlocal://page?kind=file&target={}", urlencoding::encode(target))
+        }
+        ("search", Some(query)) => {
+            format!("windlocal://page?kind=search&target={}", urlencoding::encode(query))
+        }
+        ("app", Some(name)) => {
+            format!("windlocal://page?kind=app&target={}", urlencoding::encode(name))
+        }
+        ("settings", _) => "windlocal://page?kind=settings".to_string(),
+        ("show-workspace", _) => "windlocal://command?id=show_workspace".to_string(),
+        ("show-settings", _) => "windlocal://command?id=show_settings".to_string(),
+        ("check-upgrade", _) => "windlocal://command?id=check_upgrade".to_string(),
+        _ => {
+            return Err(WindError::Usage(format!(
+                "unknown wind open operation '{}'; valid: file <path>, search <query>, app <name>, settings, show-workspace, show-settings, check-upgrade",
+                op
+            ))
+            .into());
+        }
+    };
+
+    let action = windlocal::parse(&uri)?;
     windlocal::validate(&action)?;
     if let windlocal::WindAction::Page { target, .. } = &action {
         let root = get_workspace_root()?;
