@@ -1,8 +1,6 @@
-//! Workspace file operations.
+//! windcli workspace module
 //!
-//! All user-provided paths must be resolved through `safe_path()` or
-//! `safe_path_for_create()` before touching the filesystem. P0 deliberately
-//! rejects symlink/reparse-point components instead of following them.
+//! Provides controlled file operations within a workspace directory.
 
 use crate::errors::WindError;
 use std::fs;
@@ -172,11 +170,7 @@ pub fn cat(path: &Path, size_limit: u64) -> anyhow::Result<String> {
     fs::read_to_string(path).map_err(|e| WindError::PermissionDenied(e.to_string()).into())
 }
 
-/// Write a file using a target-directory temp file followed by rename.
-///
-/// Keeping the temp file beside the target avoids cross-filesystem rename
-/// fallback. If the OS still reports cross-device rename, P0 fails explicitly
-/// instead of degrading to copy/delete.
+/// Writes content using atomic rename for data integrity.
 pub fn put(path: &Path, content: &[u8]) -> anyhow::Result<()> {
     if let Some(parent) = path.parent() {
         if !parent.exists() {
