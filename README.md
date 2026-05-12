@@ -1,214 +1,71 @@
 # windcli
 
-`windcli` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
+A controlled workspace CLI for AI agents and developers to safely manage local files.
 
-## 解决什么问题
-
-当你需要让自动化工具操作本地文件时，直接开放整个文件系统风险太高。`windcli` 把能力收敛到一个 active workspace：
-
-- 开发者可以快速初始化一个本地 workspace，并用 CLI 管理其中的文件。
-- AI Agent / 脚本可以通过稳定命令和 `--json` 输出集成，而不是直接访问任意系统路径。
-- 上层产品后续可以封装自己的本地入口；P0 不把底层协议直接暴露给终端用户。
-
-P0 聚焦受控 workspace 文件能力。它不是通用 shell 执行器、全盘文件管理器，也不做文件元数据同步。
-
-## 安装
-
-### 从源码安装
-
-前置条件：已安装 Rust stable 和 Cargo。可以先检查：
+## Quick Setup (AI Agent)
 
 ```bash
-rustc --version
-cargo --version
+# Download and run
+curl -L https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.6/windcli.exe -o windcli.exe
+
+# Initialize workspace (one-time)
+windcli.exe init C:\agent-workspace
+
+# Use from any directory
+cd C:\agent-workspace
+windcli.exe put notes/todo.md --stdin
+windcli.exe cat notes/todo.md
+windcli.exe ls notes
 ```
 
-如果没有安装 Rust/Cargo，请先通过 rustup 或 Rust 官方安装方式安装。
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `windcli init <path>` | Initialize/create workspace |
+| `windcli ls [path]` | List files |
+| `windcli cat <path>` | Read file (≤10MB) |
+| `windcli put <path> --stdin` | Write file from stdin |
+| `windcli mkdir <path>` | Create directory |
+| `windcli rm <path>` | Delete file |
+| `windcli rm <path> --recursive --yes` | Delete directory |
+| `windcli version` | Show version |
+| `windcli upgrade --check` | Check for updates |
+
+## Security
+
+- All paths are relative to workspace root
+- No `..` path traversal allowed
+- No symlink following
+- 10MB file size limit for reads
+
+## Windows Quick Start
+
+```powershell
+# Download
+Invoke-WebRequest -Uri "https://github.com/wbyanclaw/wind-cli/releases/download/v0.1.6/windcli.exe" -OutFile "windcli.exe"
+
+# Initialize workspace
+.\windcli.exe init $env:USERPROFILE\wind-workspace
+
+# Write and read files
+"hello world" | .\windcli.exe put notes\test.txt --stdin
+.\windcli.exe cat notes\test.txt
+```
+
+## Installation from Source
 
 ```bash
 git clone git@github.com:wbyanclaw/wind-cli.git
 cd wind-cli
-cargo install --path .
-windcli version
-```
-
-`cargo install --path .` 默认把二进制安装到 `~/.cargo/bin`。如果系统找不到 `windcli`，把 Cargo bin 加到 `PATH`：
-
-```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-需要长期生效时，把上面这一行加入 `~/.bashrc`、`~/.zshrc` 或你的 shell 配置文件。
-
-### 二进制 Release
-
-当前还没有正式 release 下载。P0 阶段先支持源码安装；CI 已按 Linux musl、macOS x86_64/arm64、Windows MSVC 的矩阵准备后续二进制产物。
-
-## 3 步快速开始
-
-```bash
-# 1. 创建或选择一个 active workspace
-windcli init ~/my-workspace
-
-# 后续命令里的路径都相对这个 workspace，不是相对当前 shell 目录
-
-# 2. 在 workspace 内写入文件
-printf "hello wind\n" | windcli put notes/hello.md --stdin
-
-# 3. 查看和读取文件
-windcli ls notes
-windcli cat notes/hello.md
-```
-
-## 5 分钟完整示例
-
-```bash
-# 初始化 workspace；目录不存在时会创建
-windcli init ~/my-workspace
-
-# 创建嵌套目录
-windcli mkdir docs/getting-started
-
-# 从 stdin 写入多行文本
-cat <<'EOF' | windcli put docs/getting-started/intro.md --stdin
-# Intro
-
-This file was created through windcli.
-EOF
-
-# 浏览和读取
-windcli ls docs/getting-started
-windcli cat docs/getting-started/intro.md
-
-# 给脚本/Agent 使用 JSON 输出
-windcli --json ls docs/getting-started
-
-# 检查更新能力；P0 不自动替换二进制
-windcli upgrade --check
-```
-
-## 常用命令
-
-```bash
-windcli version
-windcli init [path]
-windcli ls [path]
-windcli cat <path>
-windcli put <path> --stdin
-windcli put <path> --file <local-source>
-windcli mkdir <path>
-windcli rm <path>
-windcli rm <path> --recursive --yes
-windcli rm <path> --dry-run
-windcli upgrade --check
-
-# 给脚本或 AI Agent 使用结构化输出
-windcli --json ls notes
-```
-
-## Workspace 模型
-
-P0 只支持一个 active workspace。
-
-- `windcli init [path]` 会创建目录、解析为 canonical path，并写入平台标准配置文件。
-- 对同一个路径重复执行 `windcli init` 是幂等的。
-- 对不同路径执行 `windcli init` 会失败并提示当前 active workspace；P0 不支持 `--switch`。
-- 文件命令只接受相对 workspace 的路径。
-
-## 安全边界
-
-所有文件命令在触碰文件系统前，都必须通过 workspace 安全层解析路径。
-
-- 拒绝绝对路径和 `..` 路径逃逸。
-- 拒绝 glob/wildcard 删除。
-- `cat` 有 10MB hard limit，避免大文件直接打爆内存。
-- `put` 使用目标同目录临时文件 + rename；如果不能保证原子 rename，则失败，不降级为 copy/delete。
-- `rm` 删除非空目录必须显式传 `--recursive --yes`。
-- P0 不承诺保留 `mtime`、`atime`、owner、ACL、xattr、executable bit 等元数据。
-
-### Symlink 行为
-
-P0 是 no-follow，但 `ls` 允许展示 symlink 条目，方便用户理解 workspace 里有什么。
-
-| 命令 | symlink 行为 |
-| --- | --- |
-| `ls` | 展示条目，并标记为 `symlink`。 |
-| `cat` | 返回 `SYMLINK_NOT_SUPPORTED`。 |
-| `put` | 如果目标路径或已存在的父级组件是 symlink/reparse point，则失败。 |
-| `rm` | 返回 `SYMLINK_NOT_SUPPORTED`。 |
-这个差异是刻意设计的：允许看见 symlink，但不允许通过 symlink 读写或逃逸 workspace。
-
-## 协议入口说明
-
-`windlocal://` 属于上层产品的内部集成协议，不作为 P0 Windows release 的外部用户命令暴露。终端用户应使用 workspace 文件命令；协议能力需要由上层应用封装后再提供。
-
-## JSON 与错误输出
-
-所有命令都支持 `--json`。成功输出包含 `"ok": true`；错误输出包含稳定错误码和 exit code：
-
-```json
-{
-  "ok": false,
-  "error": {
-    "error_code": "PATH_TRAVERSAL",
-    "exitCode": 3,
-    "message": "path traversal attempt detected",
-    "traceId": "..."
-  }
-}
-```
-
-P0 兼容性约定：
-
-- `ok`、`error.error_code`、`error.exitCode`、`error.message` 是稳定字段。
-- `traceId` 可选，用于排查问题。
-- 人类可读的 `message` 可以被澄清，但稳定 `error_code` 不应在无兼容说明时改名。
-
-## Exit Code
-
-| Code | 含义 |
-| --- | --- |
-| 0 | 成功 |
-| 1 | 通用错误 |
-| 2 | 参数/用法错误 |
-| 3 | workspace / 路径错误 |
-| 4 | 协议/内部入口错误 |
-| 5 | IO / 权限错误 |
-| 6 | 平台 / 环境错误 |
-| 7 | 网络 / 版本检查错误 |
-
-## 架构说明
-
-当前代码保持小而直，但模块职责必须清楚：
-
-| 模块 | 职责 |
-| --- | --- |
-| `src/cli.rs` | 只定义 clap 参数，不放业务逻辑。 |
-| `src/app.rs` | 命令 handler 和调度层，把 CLI 命令转成 workspace 操作。 |
-| `src/workspace/` | workspace 路径安全和文件操作。 |
-| `src/windlocal/` | 内部协议解析预留模块；P0 release 不把它作为用户入口暴露。 |
-| `src/config.rs` | 平台标准配置路径和 active workspace 持久化。 |
-| `src/errors.rs` | 错误类型、稳定错误码、exit code 和 JSON 错误输出。 |
-| `src/platform/` | OS 抽象预留边界。P0 不启动外部程序。 |
-
-后续如果 `workspace` 继续变大，可以拆成 path security 和 file operations 两个子模块；P0 先避免重构扩大范围。
-
-## 开发
-
-```bash
-cargo fmt
-cargo test
-cargo clippy
 cargo build --release
+./target/release/windcli.exe version
 ```
 
-集成测试会使用 `WIND_CONFIG_PATH` 隔离配置文件，避免污染真实用户配置。
+## Architecture
 
-## P0 明确不做
-
-- 完整自更新和二进制替换。
-- 任意 shell 执行或 `Platform::launch(cmd)`。
-- follow symlink/reparse point。
-- 文件元数据同步。
-- 多 workspace 切换。
-- 遥测或匿名心跳。
+- `src/cli.rs` — CLI argument definitions
+- `src/app.rs` — Command handlers
+- `src/workspace/` — Safe file operations
+- `src/config.rs` — Workspace configuration
+- `src/errors.rs` — Error codes and messages
