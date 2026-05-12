@@ -8,6 +8,13 @@ This release provides a Windows x86_64 executable for the P0 wind CLI MVP.
 - `wind-windows-x86_64.zip`: zipped Windows executable.
 - `SHA256SUMS.txt`: SHA256 checksums for verification.
 
+Verify the executable checksum in PowerShell:
+
+```powershell
+Get-FileHash .\wind.exe -Algorithm SHA256
+Get-Content .\SHA256SUMS.txt
+```
+
 ## Quick Start
 
 Run directly from the download directory:
@@ -18,6 +25,7 @@ Run directly from the download directory:
 "hello wind" | .\wind.exe put notes\hello.md --stdin
 .\wind.exe ls notes
 .\wind.exe cat notes\hello.md
+.\wind.exe upgrade --check
 ```
 
 To use `wind.exe` from any terminal, place it in a directory that is already on
@@ -26,7 +34,6 @@ To use `wind.exe` from any terminal, place it in a directory that is already on
 ## P0 Scope
 
 - Controlled workspace file operations.
-- `windlocal://` parse/validate only.
 - Single active workspace.
 - No-follow symlink/reparse-point policy.
 - `upgrade --check` reports capability only; automatic self-update is not
@@ -35,6 +42,8 @@ To use `wind.exe` from any terminal, place it in a directory that is already on
 ## Not Included In This Release
 
 - macOS artifacts.
+- Public `windlocal://` command entry. Protocol integration must be wrapped by
+  an upper-layer product before it is exposed to users.
 - Full automatic self-update.
 - Arbitrary shell/program launch.
 - Multi-workspace switching.

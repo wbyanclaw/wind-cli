@@ -23,7 +23,12 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             yes,
             dry_run,
         } => cmd_rm(path, *recursive, *yes, *dry_run),
-        Command::Open { uri } => cmd_open(uri),
+        Command::Open {
+            file,
+            search,
+            app,
+            settings,
+        } => cmd_open(file.as_ref(), search.as_ref(), *app, *settings),
         Command::Upgrade { check } => cmd_upgrade(*check),
     };
 
@@ -209,19 +214,47 @@ fn cmd_rm(
     }
 }
 
-fn cmd_open(uri: &str) -> anyhow::Result<serde_json::Value> {
-    // P0: only parse/validate, do not execute external actions
-    let action = windlocal::parse(uri)?;
-    windlocal::validate(&action)?;
-    if let windlocal::WindAction::Page { target, .. } = &action {
-        let root = get_workspace_root()?;
-        let _ = workspace::safe_path(&root, Path::new(target))?;
-    }
+fn cmd_open(
+    file: Option<&PathBuf>,
+    search: Option<&String>,
+    app: bool,
+    settings: bool,
+) -> anyhow::Result<serde_json::Value> {
+    // Encapsulate windlocal details - user doesn't see URI scheme
+    let action = match (file, search, app, settings) {
+        (Some(path), _, _, _) => {
+            let target = path.to_string_lossy();
+            if target.contains("..") || target.starts_with('/') {
+                return Err(WindError::ActionBlocked("path traversal attempt".to_string()).into());
+            }
+            windlocal::WindAction::Page {
+                kind: windlocal::PageKind::File,
+                target: target.to_string(),
+            }
+        }
+        (_, Some(query), _, _) => windlocal::WindAction::Page {
+            kind: windlocal::PageKind::Search,
+            target: query.to_string(),
+        },
+        (_, _, true, _) => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowApp,
+        },
+        (_, _, _, true) => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowSettings,
+        },
+        _ => {
+            return Err(WindError::Usage(
+                "open requires --file <path>, --search <query>, --app, or --settings".to_string(),
+            )
+            .into())
+        }
+    };
 
+    windlocal::validate(&action)?;
     let action_json = windlocal::action_to_json(&action);
     Ok(serde_json::json!({
         "ok": true,
-        "message": "validated",
+        "message": "opened",
         "action": action_json
     }))
 }

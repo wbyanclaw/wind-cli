@@ -1,6 +1,6 @@
 # wind CLI
 
-`wind` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件，并安全校验 `windlocal://` 链接。
+`wind` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
 
 ## 解决什么问题
 
@@ -8,9 +8,9 @@
 
 - 开发者可以快速初始化一个本地 workspace，并用 CLI 管理其中的文件。
 - AI Agent / 脚本可以通过稳定命令和 `--json` 输出集成，而不是直接访问任意系统路径。
-- 桌面端或网页入口可以把 `windlocal://` 链接交给 `wind open` 做安全解析，不执行任意程序。
+- 上层产品后续可以封装自己的本地入口；P0 不把底层协议直接暴露给终端用户。
 
-P0 只做两件事：受控 workspace 文件能力 + `windlocal://` 安全解析 MVP。它不是通用 shell 执行器、全盘文件管理器，也不做文件元数据同步。
+P0 聚焦受控 workspace 文件能力。它不是通用 shell 执行器、全盘文件管理器，也不做文件元数据同步。
 
 ## 安装
 
@@ -83,9 +83,6 @@ wind cat docs/getting-started/intro.md
 # 给脚本/Agent 使用 JSON 输出
 wind --json ls docs/getting-started
 
-# 校验 windlocal 链接；P0 只 parse/validate，不启动外部程序
-wind --json open 'windlocal://page?kind=file&target=docs/getting-started/intro.md'
-
 # 检查更新能力；P0 不自动替换二进制
 wind upgrade --check
 ```
@@ -103,7 +100,6 @@ wind mkdir <path>
 wind rm <path>
 wind rm <path> --recursive --yes
 wind rm <path> --dry-run
-wind open <windlocal-uri>
 wind upgrade --check
 
 # 给脚本或 AI Agent 使用结构化输出
@@ -140,39 +136,11 @@ P0 是 no-follow，但 `ls` 允许展示 symlink 条目，方便用户理解 wor
 | `cat` | 返回 `SYMLINK_NOT_SUPPORTED`。 |
 | `put` | 如果目标路径或已存在的父级组件是 symlink/reparse point，则失败。 |
 | `rm` | 返回 `SYMLINK_NOT_SUPPORTED`。 |
-| `open` | 如果校验后的 target 经过 symlink/reparse point，则失败。 |
-
 这个差异是刻意设计的：允许看见 symlink，但不允许通过 symlink 读写或逃逸 workspace。
 
-## windlocal 链接
+## 协议入口说明
 
-P0 的 `wind open` 只解析和校验 `windlocal://`，不执行 shell 命令，也不启动任意外部程序。
-
-支持的格式：
-
-```text
-windlocal://page?kind=file&target=docs/readme.md
-windlocal://command?id=show_workspace
-```
-
-允许的 page kind：
-
-- `file`
-- `search`
-- `app`
-- `settings`
-
-允许的 command id：
-
-- `show_workspace`
-- `show_settings`
-- `check_upgrade`
-
-多余参数会被拒绝。比如下面这个命令会失败：
-
-```bash
-wind open 'windlocal://page?kind=file&target=docs/readme.md&cmd=launch'
-```
+`windlocal://` 属于上层产品的内部集成协议，不作为 P0 Windows release 的外部用户命令暴露。终端用户应使用 workspace 文件命令；协议能力需要由上层应用封装后再提供。
 
 ## JSON 与错误输出
 
@@ -204,7 +172,7 @@ P0 兼容性约定：
 | 1 | 通用错误 |
 | 2 | 参数/用法错误 |
 | 3 | workspace / 路径错误 |
-| 4 | windlocal 协议错误 |
+| 4 | 协议/内部入口错误 |
 | 5 | IO / 权限错误 |
 | 6 | 平台 / 环境错误 |
 | 7 | 网络 / 版本检查错误 |
@@ -216,9 +184,9 @@ P0 兼容性约定：
 | 模块 | 职责 |
 | --- | --- |
 | `src/cli.rs` | 只定义 clap 参数，不放业务逻辑。 |
-| `src/app.rs` | 命令 handler 和调度层，把 CLI 命令转成 workspace / windlocal 操作。 |
+| `src/app.rs` | 命令 handler 和调度层，把 CLI 命令转成 workspace 操作。 |
 | `src/workspace/` | workspace 路径安全和文件操作。 |
-| `src/windlocal/` | `windlocal://` 解析、白名单 schema、校验和 JSON action 输出。 |
+| `src/windlocal/` | 内部协议解析预留模块；P0 release 不把它作为用户入口暴露。 |
 | `src/config.rs` | 平台标准配置路径和 active workspace 持久化。 |
 | `src/errors.rs` | 错误类型、稳定错误码、exit code 和 JSON 错误输出。 |
 | `src/platform/` | OS 抽象预留边界。P0 不启动外部程序。 |

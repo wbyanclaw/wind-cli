@@ -101,29 +101,6 @@ fn path_traversal_is_rejected_as_json_error() {
         .stderr(predicate::str::contains("exitCode"));
 }
 
-#[test]
-fn windlocal_rejects_unknown_params() {
-    let temp = TempDir::new().unwrap();
-    let root = workspace(&temp);
-    fs::create_dir_all(root.join("docs")).unwrap();
-    fs::write(root.join("docs/readme.md"), "ok").unwrap();
-
-    wind(&temp)
-        .args(["init", root.to_str().unwrap()])
-        .assert()
-        .success();
-
-    wind(&temp)
-        .args([
-            "--json",
-            "open",
-            "windlocal://page?kind=file&target=docs/readme.md&cmd=launch",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("UNKNOWN_PARAM"));
-}
-
 #[cfg(unix)]
 #[test]
 fn symlink_targets_are_rejected_for_read() {
@@ -145,6 +122,58 @@ fn symlink_targets_are_rejected_for_read() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("SYMLINK_NOT_SUPPORTED"));
+}
+
+#[test]
+fn open_file_works() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace(&temp);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("readme.md"), "hello").unwrap();
+
+    wind(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    wind(&temp)
+        .args(["--json", "open", "--file", "readme.md"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains("\"type\": \"page\""))
+        .stdout(predicate::str::contains("\"kind\": \"file\""));
+}
+
+#[test]
+fn open_search_works() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace(&temp);
+    fs::create_dir_all(&root).unwrap();
+
+    wind(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    wind(&temp)
+        .args(["--json", "open", "--search", "hello"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"ok\": true"))
+        .stdout(predicate::str::contains("\"type\": \"page\""))
+        .stdout(predicate::str::contains("\"kind\": \"search\""));
+}
+
+#[test]
+fn open_requires_argument() {
+    let temp = TempDir::new().unwrap();
+
+    wind(&temp)
+        .args(["--json", "open"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("USAGE"));
 }
 
 #[test]

@@ -42,6 +42,7 @@ impl PageKind {
 #[derive(Debug, Clone, PartialEq)]
 pub enum CommandId {
     ShowWorkspace,
+    ShowApp,
     ShowSettings,
     CheckUpgrade,
 }
@@ -50,6 +51,7 @@ impl CommandId {
     pub fn from_str(s: &str) -> Result<Self, WindError> {
         match s.to_lowercase().as_str() {
             "show_workspace" => Ok(Self::ShowWorkspace),
+            "show_app" => Ok(Self::ShowApp),
             "show_settings" => Ok(Self::ShowSettings),
             "check_upgrade" => Ok(Self::CheckUpgrade),
             other => Err(WindError::InvalidCommandId(other.to_string())),
@@ -200,6 +202,7 @@ fn kind_to_str(kind: &PageKind) -> &'static str {
 fn command_id_to_str(id: &CommandId) -> &'static str {
     match id {
         CommandId::ShowWorkspace => "show_workspace",
+        CommandId::ShowApp => "show_app",
         CommandId::ShowSettings => "show_settings",
         CommandId::CheckUpgrade => "check_upgrade",
     }

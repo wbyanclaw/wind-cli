@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(
     name = "wind",
-    about = "wind CLI — 受控 workspace 文件管理 + windlocal 安全解析",
+    about = "wind CLI — 受控 workspace 文件管理",
     version
 )]
 pub struct Cli {
@@ -84,10 +84,23 @@ pub enum Command {
         dry_run: bool,
     },
 
-    /// 执行 windlocal 协议
+    /// 打开文件或应用（内部使用 windlocal 协议封装）
     Open {
-        /// windlocal URI
-        uri: String,
+        /// 打开 workspace 内的文件
+        #[arg(long, short = 'f')]
+        file: Option<std::path::PathBuf>,
+
+        /// 在 workspace 内搜索
+        #[arg(long, short = 's')]
+        search: Option<String>,
+
+        /// 打开应用视图
+        #[arg(long)]
+        app: bool,
+
+        /// 打开设置视图
+        #[arg(long)]
+        settings: bool,
     },
 
     /// 检查更新（不实际替换二进制）
