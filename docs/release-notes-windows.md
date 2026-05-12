@@ -1,10 +1,10 @@
-# windcli Windows Release
+# wind CLI Windows Release
 
 This release provides a Windows x86_64 executable for the P0 wind CLI MVP.
 
 ## Download
 
-- `windcli.exe`: standalone Windows executable (CLI command: `wind`, project: `windcli`).
+- `windcli.exe`: standalone Windows executable.
 - `windcli-windows-x86_64.zip`: zipped Windows executable.
 - `SHA256SUMS.txt`: SHA256 checksums for verification.
 
@@ -25,7 +25,6 @@ Run directly from the download directory:
 "hello wind" | .\windcli.exe put notes\hello.md --stdin
 .\windcli.exe ls notes
 .\windcli.exe cat notes\hello.md
-.\windcli.exe open --file notes\hello.md
 .\windcli.exe upgrade --check
 ```
 
@@ -34,15 +33,17 @@ To use `windcli.exe` from any terminal, place it in a directory that is already 
 
 ## P0 Scope
 
-- Controlled workspace file operations: `init`, `ls`, `cat`, `put`, `mkdir`, `rm`.
-- `wind open --file <path>` / `--search <query>` / `--app` / `--settings`: windlocal protocol encapsulated, user uses flags not raw URIs.
+- Controlled workspace file operations.
 - Single active workspace.
 - No-follow symlink/reparse-point policy.
-- `upgrade --check` reports capability only; automatic self-update is not included in this release.
+- `upgrade --check` reports capability only; automatic self-update is not
+  included in this release.
 
 ## Not Included In This Release
 
 - macOS artifacts.
+- Public `windlocal://` command entry. Protocol integration must be wrapped by
+  an upper-layer product before it is exposed to users.
 - Full automatic self-update.
 - Arbitrary shell/program launch.
 - Multi-workspace switching.
