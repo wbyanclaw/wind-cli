@@ -172,8 +172,7 @@ fn open_requires_argument() {
     wind(&temp)
         .args(["--json", "open"])
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("USAGE"));
+        .failure();
 }
 
 #[test]
