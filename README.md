@@ -94,6 +94,12 @@ wind --json list notes
 - File reads are capped at 10MB
 - Glob/wildcard patterns are blocked in delete
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WIND_CONFIG_PATH` | `~/.wind/config.json` | Path to config file (useful for test isolation) |
+
 ## Installation from Source
 
 ```bash

@@ -13,10 +13,6 @@ pub struct Cli {
     #[arg(long, short)]
     pub json: bool,
 
-    /// Show verbose/debug output
-    #[arg(long, short)]
-    pub verbose: bool,
-
     #[command(subcommand)]
     pub command: Command,
 }

@@ -194,6 +194,7 @@ fn cmd_rm(
     if dry_run {
         Ok(serde_json::json!({
             "ok": true,
+            "dry_run": true,
             "message": format!("dry run — would delete: {}", safe.display()),
             "path": safe.display().to_string()
         }))
@@ -258,7 +259,9 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     let current = env!("CARGO_PKG_VERSION");
     Ok(serde_json::json!({
         "ok": true,
+        "update_available": false,
         "current_version": current,
-        "message": "upgrade check: this version can report available updates; automatic self-update is not available in this release"
+        "latest_version": current,
+        "message": "automatic self-update is not available in this release"
     }))
 }
