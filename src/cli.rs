@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "windcli",
-    about = "windcli CLI — 受控 workspace 文件管理",
+    name = "wind",
+    about = "wind CLI — 受控 workspace 文件管理 CLI",
     version
 )]
 pub struct Cli {
@@ -41,13 +41,13 @@ pub enum Command {
     },
 
     /// 读取文件内容
-    Cat {
+    Read {
         /// 文件路径
         path: std::path::PathBuf,
     },
 
-    /// 写文件（支持 stdin 或 --file）
-    Put {
+    /// 写文件（支持 stdin 或 --content）
+    Write {
         /// 目标路径
         path: std::path::PathBuf,
 
@@ -55,9 +55,9 @@ pub enum Command {
         #[arg(long, short = 's')]
         stdin: bool,
 
-        /// 从指定本地文件读取内容
-        #[arg(long, short = 'f')]
-        file: Option<std::path::PathBuf>,
+        /// 直接写入文本内容
+        #[arg(long, short = 'c')]
+        content: Option<String>,
     },
 
     /// 创建目录
@@ -71,11 +71,11 @@ pub enum Command {
         /// 目标路径
         path: std::path::PathBuf,
 
-        /// 递归删除（删除非空目录）
+        /// 递归删除目录
         #[arg(long, short = 'r')]
         recursive: bool,
 
-        /// 确认删除（需配合 --recursive 使用）
+        /// 确认删除（必须指定才执行）
         #[arg(long, short = 'y')]
         yes: bool,
 
@@ -88,7 +88,7 @@ pub enum Command {
         force: bool,
     },
 
-    /// 打开文件或应用（内部使用 windlocal 协议封装）
+    /// 打开 workspace 内容（windlocal 协议封装入口）
     Open {
         /// 打开 workspace 内的文件
         #[arg(long, short = 'f')]
@@ -116,5 +116,23 @@ pub enum Command {
 }
 
 pub fn build() -> Cli {
-    Cli::parse()
+    let args: Vec<String> = std::env::args().collect();
+    let args = normalize_args(&args);
+    Cli::parse_from(args)
+}
+
+/// Normalize AI-friendly command aliases: cat→read, put→write, delete→rm
+fn normalize_args(args: &[String]) -> Vec<String> {
+    let mut result = vec![args[0].clone()];
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "cat" => result.push("read".to_string()),
+            "put" => result.push("write".to_string()),
+            "delete" => result.push("rm".to_string()),
+            arg => result.push(arg.to_string()),
+        }
+        i += 1;
+    }
+    result
 }

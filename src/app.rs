@@ -3,9 +3,7 @@
 use crate::cli::{Cli, Command};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
-use crate::{windlocal, workspace};
 use std::path::Path;
-use std::path::PathBuf;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let json_mode = cli.json;
@@ -14,22 +12,15 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Version => cmd_version(),
         Command::Init { path } => cmd_init(path),
         Command::Ls { path } => cmd_ls(path),
-        Command::Cat { path } => cmd_cat(path),
-        Command::Put { path, stdin, file } => cmd_put(path, *stdin, file.as_ref()),
+        Command::Read { path } => cmd_read(path),
+        Command::Write { path, stdin, content } => cmd_write(path, *stdin, content.as_ref()),
         Command::Mkdir { path } => cmd_mkdir(path),
-        Command::Rm {
-            path,
-            recursive,
-            yes,
-            dry_run,
-            force,
-        } => cmd_rm(path, *recursive, *yes, *dry_run, *force),
-        Command::Open {
-            file,
-            search,
-            app,
-            settings,
-        } => cmd_open(file.as_ref(), search.as_ref(), *app, *settings),
+        Command::Rm { path, recursive, yes, dry_run, force } => {
+            cmd_rm(path, *recursive, *yes, *dry_run, *force)
+        }
+        Command::Open { file, search, app, settings } => {
+            cmd_open(file.as_ref(), search.as_ref(), *app, *settings)
+        }
         Command::Upgrade { check } => cmd_upgrade(*check),
     };
 
@@ -48,23 +39,16 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
     }
 }
 
-// =============================================================================
-// Commands
-// =============================================================================
-
 fn cmd_version() -> anyhow::Result<serde_json::Value> {
     Ok(serde_json::json!({
         "ok": true,
         "version": env!("CARGO_PKG_VERSION"),
-        "name": "wind"
+        "name": "windcli"
     }))
 }
 
-fn cmd_init(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
-    // P0: single active workspace
-    // If path is same as existing active workspace, idempotent
-    // If path is different, fail with clear message (P0: no --switch)
-    let root = if path == &PathBuf::from(".") {
+fn cmd_init(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
+    let root = if path == &std::path::PathBuf::from(".") {
         std::env::current_dir()?
     } else {
         path.clone()
@@ -74,8 +58,7 @@ fn cmd_init(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
         return Err(WindError::InitFailed(format!(
             "workspace path is not a directory: {}",
             root.display()
-        ))
-        .into());
+        )).into());
     }
 
     std::fs::create_dir_all(&root).map_err(|e| {
@@ -97,7 +80,6 @@ fn cmd_init(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
     let mut config = crate::config::Config::load()?;
     if let Some(existing) = &config.active_workspace {
         if existing == &root {
-            // Idempotent
             return Ok(serde_json::json!({
                 "ok": true,
                 "message": "workspace already initialized",
@@ -123,10 +105,10 @@ fn cmd_init(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_ls(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
+fn cmd_ls(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path(&root, path)?;
-    let listing = workspace::ls(&safe)?;
+    let safe = crate::workspace::safe_path(&root, path)?;
+    let listing = crate::workspace::ls(&safe)?;
     Ok(serde_json::json!({
         "ok": true,
         "root": root,
@@ -134,58 +116,64 @@ fn cmd_ls(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_cat(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
-    const CAT_SIZE_LIMIT: u64 = 10 * 1024 * 1024; // 10MB
+fn cmd_read(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
+    const SIZE_LIMIT: u64 = 10 * 1024 * 1024; // 10MB
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path(&root, path)?;
-    let content = workspace::cat(&safe, CAT_SIZE_LIMIT)?;
+    let safe = crate::workspace::safe_path(&root, path)?;
+    let content = crate::workspace::cat(&safe, SIZE_LIMIT)?;
+    let size_bytes = content.len();
     Ok(serde_json::json!({
         "ok": true,
+        "file": safe.display().to_string(),
+        "size_bytes": size_bytes,
         "content": content
     }))
 }
 
-fn cmd_put(
-    path: &PathBuf,
+fn cmd_write(
+    path: &std::path::PathBuf,
     stdin: bool,
-    file: Option<&PathBuf>,
+    content: Option<&String>,
 ) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path_for_create(&root, path)?;
+    let safe = crate::workspace::safe_path_for_create(&root, path)?;
 
-    let content = if stdin {
-        // Read from stdin until EOF
+    let bytes = if stdin {
         use std::io::Read;
         let mut buf = Vec::new();
         std::io::stdin().read_to_end(&mut buf)?;
         buf
-    } else if let Some(src) = file {
-        std::fs::read(src).map_err(|e| WindError::PermissionDenied(e.to_string()))?
+    } else if let Some(text) = content {
+        text.as_bytes().to_vec()
     } else {
-        return Err(WindError::Usage("put requires either --stdin or --file".to_string()).into());
+        return Err(WindError::Usage(
+            "write requires either --stdin or --content".to_string(),
+        ).into());
     };
 
-    workspace::put(&safe, &content)?;
+    crate::workspace::put(&safe, &bytes)?;
+    let size_bytes = bytes.len();
     Ok(serde_json::json!({
         "ok": true,
-        "message": "file written",
-        "path": safe
+        "message": format!("file written: {} ({} bytes)", safe.display(), size_bytes),
+        "file": safe.display().to_string(),
+        "size_bytes": size_bytes
     }))
 }
 
-fn cmd_mkdir(path: &PathBuf) -> anyhow::Result<serde_json::Value> {
+fn cmd_mkdir(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path_for_create(&root, path)?;
-    workspace::mkdir(&safe)?;
+    let safe = crate::workspace::safe_path_for_create(&root, path)?;
+    crate::workspace::mkdir(&safe)?;
     Ok(serde_json::json!({
         "ok": true,
-        "message": "directory created",
-        "path": safe
+        "message": format!("directory created: {}", safe.display()),
+        "path": safe.display().to_string()
     }))
 }
 
 fn cmd_rm(
-    path: &PathBuf,
+    path: &std::path::PathBuf,
     recursive: bool,
     yes: bool,
     dry_run: bool,
@@ -201,63 +189,61 @@ fn cmd_rm(
     let yes = yes || force;
 
     let root = get_workspace_root()?;
-    let safe = workspace::safe_path(&root, path)?;
-
-    workspace::rm(&safe, recursive, yes, dry_run)?;
+    let safe = crate::workspace::safe_path(&root, path)?;
 
     if dry_run {
         Ok(serde_json::json!({
             "ok": true,
-            "message": "dry run — would delete",
-            "path": safe
+            "message": format!("dry run — would delete: {}", safe.display()),
+            "path": safe.display().to_string()
         }))
     } else {
+        crate::workspace::rm(&safe, recursive, yes, dry_run)?;
         Ok(serde_json::json!({
             "ok": true,
-            "message": "deleted",
-            "path": safe
+            "message": "Deleted",
+            "path": safe.display().to_string()
         }))
     }
 }
 
 fn cmd_open(
-    file: Option<&PathBuf>,
+    file: Option<&std::path::PathBuf>,
     search: Option<&String>,
     app: bool,
     settings: bool,
 ) -> anyhow::Result<serde_json::Value> {
-    // Encapsulate windlocal details - user doesn't see URI scheme
+    // Encapsulate windlocal details — user doesn't see URI scheme
     let action = match (file, search, app, settings) {
         (Some(path), _, _, _) => {
             let target = path.to_string_lossy();
             if target.contains("..") || target.starts_with('/') {
                 return Err(WindError::ActionBlocked("path traversal attempt".to_string()).into());
             }
-            windlocal::WindAction::Page {
-                kind: windlocal::PageKind::File,
+            crate::windlocal::WindAction::Page {
+                kind: crate::windlocal::PageKind::File,
                 target: target.to_string(),
             }
         }
-        (_, Some(query), _, _) => windlocal::WindAction::Page {
-            kind: windlocal::PageKind::Search,
+        (_, Some(query), _, _) => crate::windlocal::WindAction::Page {
+            kind: crate::windlocal::PageKind::Search,
             target: query.to_string(),
         },
-        (_, _, true, _) => windlocal::WindAction::Command {
-            id: windlocal::CommandId::ShowApp,
+        (_, _, true, _) => crate::windlocal::WindAction::Command {
+            id: crate::windlocal::CommandId::ShowApp,
         },
-        (_, _, _, true) => windlocal::WindAction::Command {
-            id: windlocal::CommandId::ShowSettings,
+        (_, _, _, true) => crate::windlocal::WindAction::Command {
+            id: crate::windlocal::CommandId::ShowSettings,
         },
         _ => {
             return Err(WindError::Usage(
                 "open requires --file <path>, --search <query>, --app, or --settings".to_string(),
-            )
-            .into())
+            ).into())
         }
     };
 
-    windlocal::validate(&action)?;
-    let action_json = windlocal::action_to_json(&action);
+    crate::windlocal::validate(&action)?;
+    let action_json = crate::windlocal::action_to_json(&action);
     Ok(serde_json::json!({
         "ok": true,
         "message": "opened",
@@ -269,7 +255,6 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     if !check {
         return Err(WindError::Usage("upgrade P0 only supports --check".to_string()).into());
     }
-    // P0: only check version, no actual binary replacement
     let current = env!("CARGO_PKG_VERSION");
     Ok(serde_json::json!({
         "ok": true,

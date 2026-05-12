@@ -11,12 +11,16 @@ mod workspace;
 use clap::Parser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-fn main() -> anyhow::Result<()> {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::from_default_env())
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+fn main() {
+    // Initialize tracing with graceful fallback for non-terminal environments
+    let _ = tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
+        .with(tracing_subscriber::fmt::layer().with_target(false))
+        .try_init();
 
-    let cli = cli::Cli::parse();
-    app::run(cli)
+    // Run the CLI; any errors are handled by app::run which exits with proper codes
+    if let Err(e) = app::run(cli::build()) {
+        eprintln!("windcli error: {}", e);
+        std::process::exit(1);
+    }
 }

@@ -1,6 +1,6 @@
-# wind CLI Windows Release
+# windcli Windows Release
 
-This release provides a Windows x86_64 executable for the P0 wind CLI MVP.
+This release provides a Windows x86_64 executable for the windcli P0 MVP.
 
 ## Download
 
