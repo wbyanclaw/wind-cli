@@ -141,7 +141,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "工具名称".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m
@@ -192,7 +192,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "文件路径".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m
@@ -217,7 +217,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目标路径".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m.insert(
@@ -226,7 +226,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "文件内容".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m.insert(
@@ -260,7 +260,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目录路径".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m
@@ -285,7 +285,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目标路径".to_string(),
                             required: true,
-                            default: None::<serde_json::Value>,
+                            default: Some(serde_json::json!(null)),
                         },
                     );
                     m.insert(
