@@ -380,7 +380,7 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
             if !overwrite {
-                return Err(WindError::FileExists(safe.to_string_lossy().to_string()).into());
+                return Err(WindError::FileExists(format!("file already exists")).into());
             }
         }
     }
