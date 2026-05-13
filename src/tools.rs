@@ -102,11 +102,10 @@ impl ToolRegistry {
     // === Tool Schema Definitions ===
 
     fn ls_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "ls".to_string(),
             description: "列出 workspace 目录内容".to_string(),
-            risk_level: None,
+            risk_level: RiskLevel::None,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -127,11 +126,10 @@ impl ToolRegistry {
     }
 
     fn describe_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "describe".to_string(),
             description: "查看工具详情".to_string(),
-            risk_level: None,
+            risk_level: RiskLevel::None,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -141,7 +139,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "工具名称".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m
@@ -152,11 +150,10 @@ impl ToolRegistry {
     }
 
     fn help_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "help".to_string(),
             description: "显示帮助信息".to_string(),
-            risk_level: None,
+            risk_level: RiskLevel::None,
             params: ToolParams {
                 properties: HashMap::new(),
                 required: vec![],
@@ -165,11 +162,10 @@ impl ToolRegistry {
     }
 
     fn version_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "version".to_string(),
             description: "输出版本信息".to_string(),
-            risk_level: None,
+            risk_level: RiskLevel::None,
             params: ToolParams {
                 properties: HashMap::new(),
                 required: vec![],
@@ -178,11 +174,10 @@ impl ToolRegistry {
     }
 
     fn read_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "read".to_string(),
             description: "读取文件内容".to_string(),
-            risk_level: Low,
+            risk_level: RiskLevel::Low,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -192,7 +187,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "文件路径".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m
@@ -203,11 +198,10 @@ impl ToolRegistry {
     }
 
     fn write_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "write".to_string(),
             description: "写入文件内容（新建或覆盖）".to_string(),
-            risk_level: Medium,
+            risk_level: RiskLevel::Medium,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -217,7 +211,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目标路径".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m.insert(
@@ -226,7 +220,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "文件内容".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m.insert(
@@ -246,11 +240,10 @@ impl ToolRegistry {
     }
 
     fn mkdir_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "mkdir".to_string(),
             description: "创建目录".to_string(),
-            risk_level: Medium,
+            risk_level: RiskLevel::Medium,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -260,7 +253,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目录路径".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m
@@ -271,11 +264,10 @@ impl ToolRegistry {
     }
 
     fn rm_schema() -> ToolSchema {
-        use self::RiskLevel::*;
         ToolSchema {
             name: "rm".to_string(),
             description: "删除文件或目录".to_string(),
-            risk_level: High,
+            risk_level: RiskLevel::High,
             params: ToolParams {
                 properties: {
                     let mut m = HashMap::new();
@@ -285,7 +277,7 @@ impl ToolRegistry {
                             param_type: "string".to_string(),
                             description: "目标路径".to_string(),
                             required: true,
-                            default: Some(serde_json::json!(null)),
+                            default: None,
                         },
                     );
                     m.insert(
