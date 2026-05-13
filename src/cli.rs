@@ -117,7 +117,7 @@ pub enum Command {
     },
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum ToolsCommand {
     /// 列出所有可用工具（AI Agent 用）
     List,

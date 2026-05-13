@@ -4,7 +4,6 @@ use crate::cli::{Cli, Command, ToolsCommand};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
 use crate::tools;
-use std::path::Path;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let json_mode = cli.json;
@@ -262,6 +261,16 @@ fn cmd_open(
             let uri = build_windlocal_uri(&action)?;
             crate::platform::open_uri(&uri)?;
         }
+        crate::windlocal::WindAction::Page { kind: crate::windlocal::PageKind::App, .. } => {
+            // Open windlocal app page
+            let uri = build_windlocal_uri(&action)?;
+            crate::platform::open_uri(&uri)?;
+        }
+        crate::windlocal::WindAction::Page { kind: crate::windlocal::PageKind::Settings, .. } => {
+            // Open windlocal settings page
+            let uri = build_windlocal_uri(&action)?;
+            crate::platform::open_uri(&uri)?;
+        }
         crate::windlocal::WindAction::Command { .. } => {
             // Open windlocal command (app/settings)
             let uri = build_windlocal_uri(&action)?;
@@ -388,6 +397,6 @@ fn compare_versions(v1: &str, v2: &str) -> i32 {
 }
 
 /// Agent Protocol tools dispatcher
-fn cmd_tools(subcommand: ToolsCommand) -> anyhow::Result<serde_json::Value> {
-    tools::run_tools(subcommand)
+fn cmd_tools(subcommand: &ToolsCommand) -> anyhow::Result<serde_json::Value> {
+    tools::run_tools(subcommand.clone())
 }
