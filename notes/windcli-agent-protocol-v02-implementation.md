@@ -30,6 +30,26 @@ pub enum RiskLevel {
 }
 ```
 
+### write tool overwrite behavior
+
+```rust
+// overwrite 参数决定风险等级
+let is_high_risk = match (schema.name.as_str(), params.get("overwrite")) {
+    ("write", Some(serde_json::Value::Bool(true))) => true,
+    _ => schema.risk_level == RiskLevel::High,
+};
+```
+
+### Behavior Matrix (write tool)
+
+| 场景 | 结果 |
+|------|------|
+| overwrite=false + 文件不存在 | 新建成功 |
+| overwrite=false + 文件已存在 | 返回 FILE_EXISTS，提示可设 overwrite=true |
+| overwrite=true + 文件不存在 | 新建成功（无风险升级）|
+| overwrite=true + 文件存在 + 无 --force | 拒绝，提示加 --force |
+| overwrite=true + 文件存在 + --force | 执行，写入，审计日志 |
+
 ## Implementation Details
 
 ### tools.rs Module
@@ -134,10 +154,11 @@ fn call_tool(name: &str, params: Value, force: bool) -> Result<()> {
 
 ## Status
 
-- [x] Phase 1 interface design (4 commands) - **ALIGNED**
-- [x] RiskLevel enum (None/Low/Medium/High) - **ALIGNED**
-- [x] --force mechanism - **ALIGNED**
-- [ ] Implementation code - PENDING Kevin authorization
+- [x] Phase 1 interface design (4 commands) - **四方对齐**
+- [x] RiskLevel enum (None/Low/Medium/High) - **四方对齐**
+- [x] --force mechanism - **四方对齐**
+- [x] write tool overwrite behavior - **三方对齐**
+- [x] Implementation code - **已提交** (commit b94fa81)
 - [ ] Architecture review - @首席架构-架构狮 (unresponsive)
 
 ## Open Points
