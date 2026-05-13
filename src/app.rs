@@ -246,7 +246,29 @@ fn cmd_open(
     };
 
     crate::windlocal::validate(&action)?;
+
+    // Execute based on action type
+    let root = crate::config::get_workspace_root()?;
     let action_json = crate::windlocal::action_to_json(&action);
+
+    match &action {
+        crate::windlocal::WindAction::Page { kind: crate::windlocal::PageKind::File, target } => {
+            // Open file with system default app (use file:// URI)
+            let safe = crate::workspace::safe_path(&root, &std::path::PathBuf::from(target))?;
+            open_file_with_default_app(&safe)?;
+        }
+        crate::windlocal::WindAction::Page { kind: crate::windlocal::PageKind::Search, .. } => {
+            // Open windlocal search page
+            let uri = build_windlocal_uri(&action)?;
+            crate::platform::open_uri(&uri)?;
+        }
+        crate::windlocal::WindAction::Command { .. } => {
+            // Open windlocal command (app/settings)
+            let uri = build_windlocal_uri(&action)?;
+            crate::platform::open_uri(&uri)?;
+        }
+    }
+
     Ok(serde_json::json!({
         "ok": true,
         "message": "opened",
@@ -254,18 +276,115 @@ fn cmd_open(
     }))
 }
 
+/// Build a windlocal URI from a WindAction
+fn build_windlocal_uri(action: &crate::windlocal::WindAction) -> anyhow::Result<String> {
+    match action {
+        crate::windlocal::WindAction::Page { kind, target } => {
+            let kind_str = match kind {
+                crate::windlocal::PageKind::File => "file",
+                crate::windlocal::PageKind::Search => "search",
+                crate::windlocal::PageKind::App => "app",
+                crate::windlocal::PageKind::Settings => "settings",
+            };
+            let encoded_target = urlencoding::encode(target);
+            Ok(format!("windlocal://page?kind={}&target={}", kind_str, encoded_target))
+        }
+        crate::windlocal::WindAction::Command { id } => {
+            let id_str = match id {
+                crate::windlocal::CommandId::ShowWorkspace => "show_workspace",
+                crate::windlocal::CommandId::ShowApp => "show_app",
+                crate::windlocal::CommandId::ShowSettings => "show_settings",
+                crate::windlocal::CommandId::CheckUpgrade => "check_upgrade",
+            };
+            Ok(format!("windlocal://command?id={}", id_str))
+        }
+    }
+}
+
+/// Open file with system default handler (does not require Wind Terminal)
+fn open_file_with_default_app(path: &std::path::Path) -> anyhow::Result<()> {
+    let absolute_path = path.canonicalize()
+        .map_err(|e| anyhow::anyhow!("cannot resolve path: {}", e))?;
+
+    let uri = format!("file://{}", absolute_path.to_string_lossy());
+    crate::platform::open_uri(&uri)
+}
+
 fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     if !check {
         return Err(WindError::Usage("upgrade P0 only supports --check".to_string()).into());
     }
+
     let current = env!("CARGO_PKG_VERSION");
+    let repo = "wbyanclaw/wind-cli";
+
+    // Fetch latest release from GitHub API
+    let latest = fetch_latest_version(repo)?;
+
+    let update_available = compare_versions(&latest, current) > 0;
+
     Ok(serde_json::json!({
         "ok": true,
-        "update_available": false,
+        "update_available": update_available,
         "current_version": current,
-        "latest_version": current,
-        "message": "automatic self-update is not available in this release"
+        "latest_version": latest,
+        "message": if update_available {
+            format!("new version {} available", latest)
+        } else {
+            "you are using the latest version".to_string()
+        }
     }))
+}
+
+/// Fetch latest version from GitHub releases
+fn fetch_latest_version(repo: &str) -> anyhow::Result<String> {
+    let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
+
+    let response = ureq::get(&url)
+        .set("User-Agent", "wind-cli")
+        .call()
+        .map_err(|e| anyhow::anyhow!("failed to fetch release info: {}", e))?;
+
+    let json: serde_json::Value = serde_json::from_reader(response.into_reader())
+        .map_err(|e| anyhow::anyhow!("invalid JSON response: {}", e))?;
+
+    // Extract tag_name from response (e.g., "v0.1.10" -> "0.1.10")
+    let tag = json.get("tag_name")
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| anyhow::anyhow!("tag_name not found in release"))?;
+
+    // Strip leading 'v' if present
+    let version = tag.strip_prefix('v').unwrap_or(tag);
+    Ok(version.to_string())
+}
+
+/// Compare two semver versions: returns positive if v1 > v2
+fn compare_versions(v1: &str, v2: &str) -> i32 {
+    use std::cmp::Ordering;
+
+    fn parse_ver(s: &str) -> Vec<u32> {
+        s.split('.')
+            .filter_map(|p| p.parse().ok())
+            .collect()
+    }
+
+    let v1_parts = parse_ver(v1);
+    let v2_parts = parse_ver(v2);
+
+    for (a, b) in v1_parts.iter().zip(v2_parts.iter()) {
+        match a.cmp(b) {
+            Ordering::Greater => return 1,
+            Ordering::Less => return -1,
+            Ordering::Equal => continue,
+        }
+    }
+
+    // If all compared parts are equal, longer version is greater
+    match v1_parts.len().cmp(&v2_parts.len()) {
+        Ordering::Greater => 1,
+        Ordering::Less => -1,
+        Ordering::Equal => 0,
+    }
 }
 
 /// Agent Protocol tools dispatcher
