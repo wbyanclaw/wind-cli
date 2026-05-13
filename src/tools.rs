@@ -365,20 +365,22 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
         return Err(WindError::HighRiskRequiresForce(name.to_string()).into());
     }
 
-    // overwrite 语义校验：新建文件时忽略 overwrite
+    // Bug 2 修复：FILE_EXISTS 检查
     if name == "write" {
         let root = crate::config::get_workspace_root()?;
         let path = params.get("path")
             .and_then(|v| v.as_str())
             .map(|p| std::path::PathBuf::from(p))
             .unwrap_or_default();
-        let safe = crate::workspace::safe_path(&root, &path).ok();
+        let safe = crate::workspace::safe_path(&root, &path)?;
 
-        if let Some(ref safe_path) = safe {
-            if safe_path.exists() {
-                // 文件存在：overwrite 逻辑已通过上面的 High risk 检查处理
-            } else {
-                // 文件不存在：新建，overwrite 参数忽略
+        if safe.exists() {
+            // overwrite=false + 文件存在 → 返回 FILE_EXISTS
+            let overwrite = params.get("overwrite")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !overwrite {
+                return Err(WindError::FileExists(safe.to_string_lossy().to_string()).into());
             }
         }
     }
@@ -386,14 +388,64 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
     // 审计日志
     log_audit(name, &params, force);
 
-    // 执行工具（这里只是记录，实际执行委托给主命令）
-    Ok(serde_json::json!({
-        "ok": true,
-        "message": format!("tool call delegated: {}", name),
-        "tool": name,
-        "params": params,
-        "force": force
-    }))
+    // Bug 1 修复：实际执行工具
+    match name {
+        "ls" => {
+            let path = params.get("path")
+                .and_then(|v| v.as_str())
+                .map(|p| std::path::PathBuf::from(p))
+                .unwrap_or_else(|| std::path::PathBuf::from("."));
+            crate::app::cmd_ls(&path)
+        }
+        "read" => {
+            let path = params.get("path")
+                .ok_or_else(|| WindError::Usage("missing required parameter: path".to_string()))?;
+            let path = path.as_str()
+                .ok_or_else(|| WindError::Usage("path must be a string".to_string()))?;
+            crate::app::cmd_read(&std::path::PathBuf::from(path))
+        }
+        "write" => {
+            let path = params.get("path")
+                .ok_or_else(|| WindError::Usage("missing required parameter: path".to_string()))?;
+            let content = params.get("content")
+                .ok_or_else(|| WindError::Usage("missing required parameter: content".to_string()))?;
+            let path = path.as_str()
+                .ok_or_else(|| WindError::Usage("path must be a string".to_string()))?;
+            let content = content.as_str()
+                .ok_or_else(|| WindError::Usage("content must be a string".to_string()))?;
+            crate::app::cmd_write(
+                &std::path::PathBuf::from(path),
+                false,
+                Some(&content.to_string()),
+            )
+        }
+        "mkdir" => {
+            let path = params.get("path")
+                .ok_or_else(|| WindError::Usage("missing required parameter: path".to_string()))?;
+            let path = path.as_str()
+                .ok_or_else(|| WindError::Usage("path must be a string".to_string()))?;
+            crate::app::cmd_mkdir(&std::path::PathBuf::from(path))
+        }
+        "rm" => {
+            let path = params.get("path")
+                .ok_or_else(|| WindError::Usage("missing required parameter: path".to_string()))?;
+            let path = path.as_str()
+                .ok_or_else(|| WindError::Usage("path must be a string".to_string()))?;
+            let recursive = params.get("recursive")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            // rm 本身是 High risk，所以 --force 已经在上面检查过
+            // 这里用 recursive=true, yes=true, dry_run=false, force=true 简化
+            crate::app::cmd_rm(
+                &std::path::PathBuf::from(path),
+                recursive,
+                true,  // yes=true（--force 已授权）
+                false, // dry_run=false
+                true,  // force=true（--force 已授权）
+            )
+        }
+        _ => Err(WindError::Usage(format!("tool not implemented: {}", name)).into()),
+    }
 }
 
 /// 校验参数是否符合 Schema
