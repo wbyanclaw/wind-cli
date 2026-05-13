@@ -19,6 +19,7 @@ directories = "5"
 urlencoding = "2"
 anyhow = "1"
 chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
 ureq = "2"
 
 [dev-dependencies]

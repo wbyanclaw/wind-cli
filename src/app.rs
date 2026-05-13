@@ -106,7 +106,7 @@ fn cmd_init(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_ls(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
+pub(crate) fn cmd_ls(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
     let safe = crate::workspace::safe_path(&root, path)?;
     let listing = crate::workspace::ls(&safe)?;
@@ -117,7 +117,7 @@ fn cmd_ls(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_read(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
+pub(crate) fn cmd_read(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     const SIZE_LIMIT: u64 = 10 * 1024 * 1024; // 10MB
     let root = get_workspace_root()?;
     let safe = crate::workspace::safe_path(&root, path)?;
@@ -131,7 +131,7 @@ fn cmd_read(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_write(
+pub(crate) fn cmd_write(
     path: &std::path::PathBuf,
     stdin: bool,
     content: Option<&String>,
@@ -162,7 +162,7 @@ fn cmd_write(
     }))
 }
 
-fn cmd_mkdir(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
+pub(crate) fn cmd_mkdir(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
     let safe = crate::workspace::safe_path_for_create(&root, path)?;
     crate::workspace::mkdir(&safe)?;
@@ -173,7 +173,7 @@ fn cmd_mkdir(path: &std::path::PathBuf) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_rm(
+pub(crate) fn cmd_rm(
     path: &std::path::PathBuf,
     recursive: bool,
     yes: bool,
