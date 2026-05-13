@@ -1,57 +1,46 @@
-# windcli Windows Release
+# windcli v0.2 Phase 1 Release
 
-This release provides a Windows x86_64 executable for the windcli P0 MVP.
+## New Features
 
-## Download
+### Agent Protocol - Tools Subcommand
+- `wind tools --list`: List all available tools (simplified metadata)
+- `wind tools describe <name>`: Show single tool schema with full parameters
+- `wind tools call <name> --params <json>`: Call tool with optional --force flag
+- `wind tools --help`: Help information
 
-- `wind.exe`: standalone Windows executable.
-- `wind-windows-x86_64.zip`: zipped Windows executable.
-- `install.ps1`: one-click installer (recommended).
-- `SHA256SUMS.txt`: SHA256 checksums for verification.
+### RiskLevel System
+- Four levels: None, Low, Medium, High
+- High risk operations (rm, write with overwrite) require `--force` flag
+- Schema validation for all tool parameters
 
-## One-Click Install (Recommended)
+### open Command - windlocal Protocol
+- `wind open --file <path>`: Open workspace file with system default app
+- `wind open --search <query>`: Open windlocal search page
+- `wind open --app`: Open windlocal application
+- `wind open --settings`: Open windlocal settings
+
+### upgrade --check - GitHub API Integration
+- Fetches latest version from GitHub releases
+- Returns `update_available` flag when new version exists
+- Semantic version comparison
+
+## Bug Fixes
+- Fixed `tools call` not executing actual commands
+- Fixed `FILE_EXISTS` error not returned when overwrite=false
+- FileExists error no longer exposes internal workspace paths
+- install.ps1: Fixed exe name (wind.exe → windcli.exe)
+
+## Installation
 
 Open PowerShell and run:
-
 ```powershell
 irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 | iex
 ```
 
-This downloads the latest `wind.exe`, places it in your user directory, adds it to your `PATH`, and verifies the installation. No administrator rights required.
-
-## Verify Download
-
+## Verification
 ```powershell
-Get-FileHash .\wind.exe -Algorithm SHA256
-Get-Content .\SHA256SUMS.txt
+Get-FileHash .\windcli.exe -Algorithm SHA256
 ```
 
-## Quick Start
-
-```powershell
-.\wind.exe version
-.\wind.exe init $env:USERPROFILE\wind-workspace
-"hello wind" | .\wind.exe put notes\hello.md --stdin
-.\wind.exe ls notes
-.\wind.exe cat notes\hello.md
-.\wind.exe open --file notes\hello.md
-.\wind.exe upgrade --check
-```
-
-To use `wind` from any terminal, place `wind.exe` in a directory on your `PATH`, or use the installer above which handles this automatically.
-
-## P0 Scope
-
-- Controlled workspace file operations: `init`, `ls`, `cat`, `put`, `mkdir`, `rm`.
-- `wind open --file <path>` / `--search <query>` / `--app` / `--settings`: windlocal protocol encapsulated, user uses CLI flags.
-- Single active workspace.
-- No-follow symlink/reparse-point policy.
-- `upgrade --check` reports capability only; automatic self-update is not included in this release.
-
-## Not Included In This Release
-
-- macOS artifacts.
-- Full automatic self-update.
-- Arbitrary shell/program launch.
-- Multi-workspace switching.
-- Metadata synchronization.
+## Version
+This release: v0.2 Phase 1
