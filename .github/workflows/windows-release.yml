@@ -65,10 +65,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "windcli ${GITHUB_REF_NAME} Windows" \
+              --notes-file docs/release-notes-windows.md
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "windcli ${GITHUB_REF_NAME} Windows" \
+              --notes-file docs/release-notes-windows.md
+          fi
+
+          gh release upload "${GITHUB_REF_NAME}" \
             dist/windcli.exe \
             dist/install.ps1 \
             dist/windcli-windows-x86_64.zip \
             dist/SHA256SUMS.txt \
-            --title "windcli ${GITHUB_REF_NAME} Windows" \
-            --notes-file docs/release-notes-windows.md
+            --clobber
