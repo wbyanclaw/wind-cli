@@ -109,6 +109,38 @@ pub enum Command {
         #[arg(long)]
         check: bool,
     },
+
+    /// Agent Protocol: list, describe, call tools
+    Tools {
+        #[command(subcommand)]
+        subcommand: ToolsCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ToolsCommand {
+    /// 列出所有可用工具（AI Agent 用）
+    List,
+
+    /// 查看单工具详情（AI Agent 调用前用）
+    Describe {
+        /// 工具名称
+        name: String,
+    },
+
+    /// 调用工具（AI Agent 用）
+    Call {
+        /// 工具名称
+        name: String,
+
+        /// JSON 格式参数
+        #[arg(long)]
+        params: Option<String>,
+
+        /// 高危操作显式授权
+        #[arg(long, short = 'f')]
+        force: bool,
+    },
 }
 
 pub fn build() -> Cli {

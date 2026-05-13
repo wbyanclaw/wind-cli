@@ -27,6 +27,7 @@ pub const ERR_SYMLINK_NOT_SUPPORTED: &str = "SYMLINK_NOT_SUPPORTED";
 pub const ERR_PATH_OUTSIDE_WORKSPACE: &str = "PATH_OUTSIDE_WORKSPACE";
 pub const ERR_PATH_NOT_FOUND: &str = "PATH_NOT_FOUND";
 pub const ERR_PATH_EXISTS: &str = "PATH_EXISTS";
+pub const ERR_FILE_EXISTS: &str = "FILE_EXISTS";
 pub const ERR_PATH_IS_DIR: &str = "PATH_IS_DIR";
 pub const ERR_PATH_IS_NOT_DIR: &str = "PATH_IS_NOT_DIR";
 pub const ERR_ATOMIC_RENAME_FAILED: &str = "ATOMIC_RENAME_FAILED";
@@ -45,6 +46,7 @@ pub const ERR_INVALID_COMMAND_ID: &str = "INVALID_COMMAND_ID";
 pub const ERR_UNKNOWN_PARAM: &str = "UNKNOWN_PARAM";
 pub const ERR_MISSING_PARAM: &str = "MISSING_PARAM";
 pub const ERR_ACTION_BLOCKED: &str = "ACTION_BLOCKED";
+pub const ERR_HIGH_RISK_REQUIRED_FORCE: &str = "HIGH_RISK_REQUIRED_FORCE";
 
 // Platform / OS / environment: 300-399
 pub const ERR_PLATFORM_UNSUPPORTED: &str = "PLATFORM_UNSUPPORTED";
@@ -80,6 +82,9 @@ pub enum WindError {
 
     #[error("path already exists: {0}")]
     PathExists(String),
+
+    #[error("file already exists: {0}")]
+    FileExists(String),
 
     #[error("path is a directory: {0}")]
     PathIsDir(String),
@@ -150,6 +155,9 @@ pub enum WindError {
     #[error("usage error: {0}")]
     Usage(String),
 
+    #[error("HIGH_RISK_OPERATION: '{0}' requires --force flag")]
+    HighRiskRequiresForce(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -165,7 +173,8 @@ impl WindError {
             | Self::PathIsDir(_)
             | Self::PathIsNotDir(_)
             | Self::DirNotEmpty(_)
-            | Self::NoActiveWorkspace => EXIT_WORKSPACE,
+            | Self::NoActiveWorkspace
+            | Self::FileExists(_) => EXIT_WORKSPACE,
 
             Self::InvalidScheme(_)
             | Self::InvalidActionType
@@ -188,7 +197,7 @@ impl WindError {
             | Self::UpgradeSourceUnreachable
             | Self::UpgradeResponseInvalid => EXIT_NETWORK,
 
-            Self::Usage(_) => EXIT_USAGE,
+            Self::Usage(_) | Self::HighRiskRequiresForce(_) => EXIT_USAGE,
             Self::Io(_) => EXIT_IO,
         }
     }
@@ -200,6 +209,7 @@ impl WindError {
             Self::PathOutsideWorkspace(_) => ERR_PATH_OUTSIDE_WORKSPACE,
             Self::PathNotFound(_) => ERR_PATH_NOT_FOUND,
             Self::PathExists(_) => ERR_PATH_EXISTS,
+            Self::FileExists(_) => ERR_FILE_EXISTS,
             Self::PathIsDir(_) => ERR_PATH_IS_DIR,
             Self::PathIsNotDir(_) => ERR_PATH_IS_NOT_DIR,
             Self::AtomicRenameFailed(_) => ERR_ATOMIC_RENAME_FAILED,
@@ -216,6 +226,7 @@ impl WindError {
             Self::UnknownParam(_) => ERR_UNKNOWN_PARAM,
             Self::MissingParam(_) => ERR_MISSING_PARAM,
             Self::ActionBlocked(_) => ERR_ACTION_BLOCKED,
+            Self::HighRiskRequiresForce(_) => ERR_HIGH_RISK_REQUIRED_FORCE,
             Self::PlatformUnsupported(_) => ERR_PLATFORM_UNSUPPORTED,
             Self::ConfigPathUnwritable(_) => ERR_CONFIG_PATH_UNWRITABLE,
             Self::InitFailed(_) => ERR_INIT_FAILED,

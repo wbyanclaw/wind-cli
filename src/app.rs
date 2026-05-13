@@ -1,8 +1,9 @@
 //! Command dispatcher
 
-use crate::cli::{Cli, Command};
+use crate::cli::{Cli, Command, ToolsCommand};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
+use crate::tools;
 use std::path::Path;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
@@ -22,6 +23,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             cmd_open(file.as_ref(), search.as_ref(), *app, *settings)
         }
         Command::Upgrade { check } => cmd_upgrade(*check),
+        Command::Tools { subcommand } => cmd_tools(subcommand),
     };
 
     match result {
@@ -264,4 +266,9 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
         "latest_version": current,
         "message": "automatic self-update is not available in this release"
     }))
+}
+
+/// Agent Protocol tools dispatcher
+fn cmd_tools(subcommand: ToolsCommand) -> anyhow::Result<serde_json::Value> {
+    tools::run_tools(subcommand)
 }
