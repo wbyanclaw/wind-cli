@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "wind",
-    about = "wind CLI — 受控 workspace 文件管理 CLI",
+    name = "windcli",
+    about = "windcli — 受控 workspace 文件管理 CLI",
     version
 )]
 pub struct Cli {

@@ -1,123 +1,96 @@
-# wind CLI — AI Agent File Workspace
+# windcli
 
-A safe file management CLI designed for AI agents. All operations are scoped to a controlled workspace directory.
+`windcli` is a controlled workspace file CLI for AI agents and local automation. All file operations are scoped to one initialized workspace directory.
 
-## Download
+## Windows Install
 
-Latest release: https://github.com/wbyanclaw/wind-cli/releases/latest
-
-### Windows — One-Click Install (Recommended)
-
-Open PowerShell and run:
+Open PowerShell and run this recommended command:
 
 ```powershell
-irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 | iex
+$p = "$env:TEMP\windcli-install.ps1"; irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -NoPause
 ```
 
-This downloads `wind.exe`, places it in your user directory, adds it to `PATH`, and verifies the installation. No administrator rights required.
+The installer downloads the latest `windcli.exe`, verifies its SHA256 checksum, installs it to `%LOCALAPPDATA%\wind-cli`, and adds that directory to your user `PATH`.
 
-### Manual Download
+If PowerShell blocks a downloaded script, run the command printed by the installer:
 
-- `wind.exe`: standalone Windows executable
-- `wind-windows-x86_64.zip`: zipped package
-- `install.ps1`: one-click installer
-- `SHA256SUMS.txt`: checksums for verification
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\install.ps1"
+```
+
+After installation, open a new terminal and verify:
+
+```powershell
+windcli --version
+```
+
+Latest release: <https://github.com/wbyanclaw/wind-cli/releases/latest>
 
 ## Quick Start
 
 ```bash
-# Initialize workspace (run once)
-wind init ~/my-workspace
+# Initialize workspace once
+windcli init ~/my-workspace
 
 # Write a file
-echo "hello world" | wind write notes/hello.txt --stdin
+echo "hello world" | windcli write notes/hello.txt --stdin
 
 # Read a file
-wind read notes/hello.txt
+windcli read notes/hello.txt
 
 # List files
-wind list notes
+windcli ls notes
 
-# Delete a file (force = --recursive --yes, AI agent friendly)
-wind delete notes/hello.txt --force
+# Delete a file
+windcli rm notes/hello.txt --yes
 ```
 
 ## Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `init <path>` | Create/switch workspace | `wind init ~/workspace` |
-| `list [path]` | List files in workspace | `wind list notes` |
-| `read <file>` | Read file content (max 10MB) | `wind read notes/todo.txt` |
-| `write <file> --stdin` | Write file from pipe | `echo 'hello' \| wind write notes/a.txt --stdin` |
-| `write <file> --content "text"` | Write file from argument | `wind write notes/a.txt --content "hello"` |
-| `mkdir <path>` | Create directory | `wind mkdir notes` |
-| `delete <path>` | Delete file | `wind delete notes/old.txt` |
-| `delete <path> --force` | Force delete (file or directory, no confirm) | `wind delete docs -f` |
-| `open --file <path>` | Validate workspace file via windlocal | `wind open --file docs/readme.md` |
-| `open --search <query>` | Search workspace content | `wind open --search "TODO"` |
-| `version` | Show version | `wind version` |
-| `upgrade --check` | Check for updates | `wind upgrade --check` |
+| `init <path>` | Create the active workspace | `windcli init ~/workspace` |
+| `ls [path]` | List files in workspace | `windcli ls notes` |
+| `read <file>` | Read file content, capped at 10MB | `windcli read notes/todo.txt` |
+| `write <file> --stdin` | Write file from stdin | `echo 'hello' \| windcli write notes/a.txt --stdin` |
+| `write <file> --content "text"` | Write file from an argument | `windcli write notes/a.txt --content "hello"` |
+| `mkdir <path>` | Create a directory | `windcli mkdir notes` |
+| `rm <path> --yes` | Delete a file | `windcli rm notes/old.txt --yes` |
+| `rm <path> --force` | Delete recursively without prompts | `windcli rm docs --force` |
+| `open --file <path>` | Validate and open a workspace file | `windcli open --file docs/readme.md` |
+| `open --search <query>` | Search workspace content | `windcli open --search "TODO"` |
+| `tools list` | List Agent Protocol tools | `windcli tools list` |
+| `tools describe <name>` | Describe one Agent Protocol tool | `windcli tools describe read` |
+| `tools call <name> --params <json>` | Call one Agent Protocol tool | `windcli tools call read --params '{"path":"notes/a.txt"}'` |
+| `version` | Show version as JSON-like output | `windcli version` |
+| `upgrade --check` | Check GitHub releases for updates | `windcli upgrade --check` |
 
 All commands support `--json` for machine-readable output.
 
-## JSON Output
-
 ```bash
-wind --json list notes
+windcli --json ls notes
 ```
-
-```json
-{
-  "ok": true,
-  "root": "/home/user/my-workspace",
-  "entries": [...]
-}
-```
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Usage/argument error |
-| 3 | Workspace / path error |
-| 4 | windlocal protocol error |
-| 5 | IO / permission error |
 
 ## Security Rules
 
-- All paths are resolved relative to workspace root
+- All paths are resolved relative to the active workspace root
 - Path traversal (`..`) is blocked
-- Symlink/reparse-point following is blocked (ls shows but does not follow)
+- Symlink and reparse-point following is blocked
 - File reads are capped at 10MB
-- Glob/wildcard patterns are blocked in delete
+- Glob and wildcard patterns are blocked in delete operations
+- High-risk tool calls require explicit `--force`
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WIND_CONFIG_PATH` | `~/.wind/config.json` | Path to config file (useful for test isolation) |
+| `WIND_CONFIG_PATH` | `~/.wind/config.json` | Path to config file, useful for test isolation |
 
-## Installation from Source
+## Build From Source
 
 ```bash
 git clone git@github.com:wbyanclaw/wind-cli.git
 cd wind-cli
-cargo install --path .
-wind version
-```
-
-`cargo install --path .` installs the binary to `~/.cargo/bin`. Add it to `PATH` if needed:
-
-```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-## Build
-
-```bash
 cargo build --release
 cargo test
 ```
