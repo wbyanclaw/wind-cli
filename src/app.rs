@@ -14,7 +14,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Init { path } => cmd_init(path),
         Command::Ls { path } => cmd_ls(path),
         Command::Read { path } => cmd_read(path),
-        Command::Write { path, stdin, content } => cmd_write(path, *stdin, content.as_ref()),
+        Command::Write { path, stdin, content, overwrite } => cmd_write(path, *stdin, content.as_ref(), *overwrite),
         Command::Mkdir { path } => cmd_mkdir(path),
         Command::Rm { path, recursive, yes, dry_run, force } => {
             cmd_rm(path, *recursive, *yes, *dry_run, *force)
@@ -142,9 +142,15 @@ pub(crate) fn cmd_write(
     path: &std::path::PathBuf,
     stdin: bool,
     content: Option<&String>,
+    overwrite: bool,
 ) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
     let safe = crate::workspace::safe_path_for_create(&root, path)?;
+
+    // Default deny: check if file exists before writing
+    if safe.exists() && !overwrite {
+        return Err(WindError::FileExists("<file> already exists".to_string()).into());
+    }
 
     let bytes = if stdin {
         use std::io::Read;

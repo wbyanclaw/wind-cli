@@ -192,6 +192,75 @@ fn bare_upgrade_guides_to_check() {
         .stdout(predicate::str::contains("P0").not());
 }
 
+// Write security tests
+#[test]
+fn write_rejects_existing_file_by_default() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("existing.txt"), "original").unwrap();
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Try to overwrite without --overwrite flag - should fail
+    windcli_cmd(&temp)
+        .args(["write", "existing.txt", "--content", "new content"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("already exists"));
+
+    // Original file should be unchanged
+    let content = fs::read_to_string(root.join("existing.txt")).unwrap();
+    assert_eq!(content, "original");
+}
+
+#[test]
+fn write_allows_overwrite_with_flag() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("existing.txt"), "original").unwrap();
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Overwrite with --overwrite flag - should succeed
+    windcli_cmd(&temp)
+        .args(["write", "existing.txt", "--content", "new content", "--overwrite"])
+        .assert()
+        .success();
+
+    // Original file should be changed
+    let content = fs::read_to_string(root.join("existing.txt")).unwrap();
+    assert_eq!(content, "new content");
+}
+
+#[test]
+fn write_works_for_new_file_without_overwrite() {
+    let temp = TempDir::new().unwrap();
+    let root = workspace_path(&temp);
+
+    windcli_cmd(&temp)
+        .args(["init", root.to_str().unwrap()])
+        .assert()
+        .success();
+
+    // Create new file without --overwrite - should succeed
+    windcli_cmd(&temp)
+        .args(["write", "newfile.txt", "--content", "brand new content"])
+        .assert()
+        .success();
+
+    // File should exist
+    let content = fs::read_to_string(root.join("newfile.txt")).unwrap();
+    assert_eq!(content, "brand new content");
+}
+
 #[test]
 fn upgrade_help_describes_check_only() {
     Command::cargo_bin("windcli")

@@ -54,6 +54,10 @@ pub enum Command {
         /// 直接写入文本内容
         #[arg(long, short = 'c')]
         content: Option<String>,
+
+        /// 允许覆盖已存在的文件（默认拒绝覆盖）
+        #[arg(long)]
+        overwrite: bool,
     },
 
     /// 创建目录
