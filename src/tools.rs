@@ -74,6 +74,7 @@ impl ToolRegistry {
             Self::version_schema(),
             // Low risk: read operations
             Self::read_schema(),
+            Self::extract_schema(),
             // Medium risk: write operations (new files)
             Self::write_schema(),
             Self::mkdir_schema(),
@@ -188,6 +189,57 @@ impl ToolRegistry {
                             description: "文件路径".to_string(),
                             required: true,
                             default: None,
+                        },
+                    );
+                    m
+                },
+                required: vec!["path".to_string()],
+            },
+        }
+    }
+
+    fn extract_schema() -> ToolSchema {
+        ToolSchema {
+            name: "extract".to_string(),
+            description: "提取文档内容（Markdown/HTML/PDF/Excel/PPTX/图片）".to_string(),
+            risk_level: RiskLevel::Low,
+            params: ToolParams {
+                properties: {
+                    let mut m = HashMap::new();
+                    m.insert(
+                        "path".to_string(),
+                        ParamSchema {
+                            param_type: "string".to_string(),
+                            description: "文件路径".to_string(),
+                            required: true,
+                            default: None,
+                        },
+                    );
+                    m.insert(
+                        "format".to_string(),
+                        ParamSchema {
+                            param_type: "string".to_string(),
+                            description: "强制指定格式（auto/md/html/pdf/xlsx/pptx/img）".to_string(),
+                            required: false,
+                            default: Some(serde_json::json!("auto")),
+                        },
+                    );
+                    m.insert(
+                        "include_base64".to_string(),
+                        ParamSchema {
+                            param_type: "boolean".to_string(),
+                            description: "图片是否包含 base64 编码内容".to_string(),
+                            required: false,
+                            default: Some(serde_json::json!(false)),
+                        },
+                    );
+                    m.insert(
+                        "tabular".to_string(),
+                        ParamSchema {
+                            param_type: "boolean".to_string(),
+                            description: "Excel 是否以对象格式输出（默认平坦数组）".to_string(),
+                            required: false,
+                            default: Some(serde_json::json!(false)),
                         },
                     );
                     m

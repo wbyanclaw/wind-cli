@@ -4,6 +4,7 @@ mod app;
 mod cli;
 mod config;
 mod errors;
+mod extract;
 mod platform;
 mod tools;
 mod windlocal;

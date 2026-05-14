@@ -115,6 +115,24 @@ pub enum Command {
         #[command(subcommand)]
         subcommand: ToolsCommand,
     },
+
+    /// 提取文档内容（Markdown / HTML / PDF / Excel / PPTX / 图片）
+    Extract {
+        /// 文件路径
+        path: std::path::PathBuf,
+
+        /// 强制指定格式（auto = 从扩展名检测）
+        #[arg(long, value_name = "FORMAT")]
+        format: Option<String>,
+
+        /// 图片：包含 base64 编码内容（默认 false）
+        #[arg(long)]
+        include_base64: bool,
+
+        /// Excel：以对象格式输出（{列名: 值}，默认返回平坦数组）
+        #[arg(long)]
+        tabular: bool,
+    },
 }
 
 #[derive(Subcommand, Debug, Clone)]

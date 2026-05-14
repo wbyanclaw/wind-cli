@@ -23,6 +23,9 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Command::Upgrade { check } => cmd_upgrade(*check),
         Command::Tools { subcommand } => cmd_tools(subcommand),
+        Command::Extract { path, format, include_base64, tabular } => {
+            cmd_extract(path, format.as_deref(), *include_base64, *tabular)
+        }
     };
 
     match result {
@@ -419,6 +422,50 @@ fn compare_versions(v1: &str, v2: &str) -> i32 {
 /// Agent Protocol tools dispatcher
 fn cmd_tools(subcommand: &ToolsCommand) -> anyhow::Result<serde_json::Value> {
     tools::run_tools(subcommand.clone())
+}
+
+/// Extract content from documents (PDF, Excel, PPTX, Markdown, HTML, images)
+fn cmd_extract(
+    path: &std::path::PathBuf,
+    format: Option<&str>,
+    include_base64: bool,
+    tabular: bool,
+) -> anyhow::Result<serde_json::Value> {
+    use crate::extract::{magic, ExtractFormat};
+
+    // Validate workspace path
+    let root = crate::config::get_workspace_root()?;
+    let safe = crate::workspace::safe_path(&root, path)?;
+
+    // Check file exists and size
+    let metadata = std::fs::metadata(&safe)?;
+    const SIZE_LIMIT: u64 = 10 * 1024 * 1024; // 10MB
+    if metadata.len() > SIZE_LIMIT {
+        return Err(WindError::Usage(format!(
+            "file too large: {} bytes (max 10MB)",
+            metadata.len()
+        )))?;
+    }
+
+    // Parse format option
+    let force_format = match format {
+        Some(f) => {
+            let f_lower = f.to_lowercase();
+            Some(match f_lower.as_str() {
+                "md" | "markdown" => ExtractFormat::Md,
+                "html" | "htm" => ExtractFormat::Html,
+                "pdf" => ExtractFormat::Pdf,
+                "xlsx" | "xls" | "excel" => ExtractFormat::Xlsx,
+                "pptx" | "ppt" => ExtractFormat::Pptx,
+                "img" | "png" | "jpg" | "jpeg" | "image" => ExtractFormat::Img,
+                _ => anyhow::bail!("unsupported format: {}", f),
+            })
+        }
+        None => None,
+    };
+
+    let output = crate::extract::extract(&safe, force_format, include_base64, tabular)?;
+    Ok(serde_json::to_value(output)?)
 }
 
 #[cfg(test)]

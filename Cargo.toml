@@ -22,6 +22,15 @@ chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 ureq = "2"
 
+# Phase 2: extract command dependencies
+calamine = { version = "0.26", features = ["dates"] }
+lopdf = "0.34"      # PDF parsing — pure Rust
+scraper = "0.21"    # HTML text extraction — CSS selectors
+image = "0.25"     # Image metadata (dimensions, color type, bit depth)
+zip = "2.1"         # ZIP archive reading (pptx is a zip of XML)
+roxmltree = "0.20" # XML parsing for PPTX slide text
+base64 = "0.22"    # Base64 encoding for image content
+
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"
