@@ -397,42 +397,10 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
     // Schema 校验
     validate_params(&schema, &params)?;
 
-    // --force 门控：高危操作必须显式授权
-    // High risk: rm（直接 High）
-    // write with overwrite: true（动态升级为 High）
-    let is_high_risk = match (schema.name.as_str(), params.get("overwrite")) {
-        ("write", Some(serde_json::Value::Bool(true))) => true,
-        _ => schema.risk_level == RiskLevel::High,
-    };
-
-    if is_high_risk && !force {
-        return Err(WindError::HighRiskRequiresForce(name.to_string()).into());
-    }
-
-    // Bug 2 修复：FILE_EXISTS 检查
-    if name == "write" {
-        let root = crate::config::get_workspace_root()?;
-        let path = params.get("path")
-            .and_then(|v| v.as_str())
-            .map(|p| std::path::PathBuf::from(p))
-            .unwrap_or_default();
-        let safe = crate::workspace::safe_path(&root, &path)?;
-
-        if safe.exists() {
-            // overwrite=false + 文件存在 → 返回 FILE_EXISTS
-            let overwrite = params.get("overwrite")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            if !overwrite {
-                return Err(WindError::FileExists(format!("file already exists")).into());
-            }
-        }
-    }
-
-    // 审计日志
+    // Audit log
     log_audit(name, &params, force);
 
-    // Bug 1 修复：实际执行工具
+    // 执行工具
     match name {
         "ls" => {
             let path = params.get("path")
@@ -457,10 +425,31 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
                 .ok_or_else(|| WindError::Usage("path must be a string".to_string()))?;
             let content = content.as_str()
                 .ok_or_else(|| WindError::Usage("content must be a string".to_string()))?;
+            // For tools interface, default to not overwriting unless explicitly set
+            let overwrite = params.get("overwrite")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            // Check file existence and risk level
+            let root = crate::config::get_workspace_root()?;
+            let safe = crate::workspace::safe_path_for_create(&root, &std::path::PathBuf::from(path))?;
+            let file_exists = safe.exists();
+
+            // High risk: overwrite=true AND file exists
+            let is_high_risk = overwrite && file_exists;
+
+            // For rm, always high risk
+            let always_high_risk = schema.risk_level == RiskLevel::High;
+
+            if (is_high_risk || always_high_risk) && !force {
+                return Err(WindError::HighRiskRequiresForce(name.to_string()).into());
+            }
+
             crate::app::cmd_write(
                 &std::path::PathBuf::from(path),
                 false,
                 Some(&content.to_string()),
+                overwrite,
             )
         }
         "mkdir" => {

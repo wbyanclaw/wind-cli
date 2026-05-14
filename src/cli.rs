@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "windcli",
-    about = "windcli — 受控 workspace 文件管理 CLI",
+    name = "wind",
+    about = "wind CLI — 受控 workspace 文件管理",
     version
 )]
 pub struct Cli {
@@ -54,6 +54,10 @@ pub enum Command {
         /// 直接写入文本内容
         #[arg(long, short = 'c')]
         content: Option<String>,
+
+        /// 允许覆盖已存在的文件（默认拒绝覆盖）
+        #[arg(long)]
+        overwrite: bool,
     },
 
     /// 创建目录
@@ -116,6 +120,12 @@ pub enum Command {
         subcommand: ToolsCommand,
     },
 
+    /// WFT (Wind Financial Terminal) 集成命令
+    Wft {
+        #[command(subcommand)]
+        action: WftAction,
+    },
+
     /// 提取文档内容（Markdown / HTML / PDF / Excel / PPTX / 图片）
     Extract {
         /// 文件路径
@@ -158,6 +168,39 @@ pub enum ToolsCommand {
         /// 高危操作显式授权
         #[arg(long, short = 'f')]
         force: bool,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum WftAction {
+    /// 打开 workspace 内的文件
+    File {
+        /// 文件路径
+        path: std::path::PathBuf,
+    },
+
+    /// 在 workspace 内搜索
+    Search {
+        /// 搜索关键词
+        query: String,
+    },
+
+    /// 打开应用视图
+    App,
+
+    /// 打开设置视图
+    Settings,
+
+    /// 显示工作区信息
+    Workspace,
+
+    /// 检查更新
+    Upgrade,
+
+    /// 直接传递 windlocal URI
+    Url {
+        /// windlocal URI
+        uri: String,
     },
 }
 

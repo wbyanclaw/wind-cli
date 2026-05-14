@@ -1,9 +1,10 @@
 //! Command dispatcher
 
-use crate::cli::{Cli, Command, ToolsCommand};
+use crate::cli::{Cli, Command, ToolsCommand, WftAction};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
 use crate::tools;
+use crate::windlocal;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
     let json_mode = cli.json;
@@ -13,12 +14,14 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Init { path } => cmd_init(path),
         Command::Ls { path } => cmd_ls(path),
         Command::Read { path } => cmd_read(path),
-        Command::Write { path, stdin, content } => cmd_write(path, *stdin, content.as_ref()),
+        Command::Write { path, stdin, content, overwrite } => cmd_write(path, *stdin, content.as_ref(), *overwrite),
         Command::Mkdir { path } => cmd_mkdir(path),
         Command::Rm { path, recursive, yes, dry_run, force } => {
             cmd_rm(path, *recursive, *yes, *dry_run, *force)
         }
         Command::Open { file, search, app, settings } => {
+            // Deprecated - show warning
+            eprintln!("warning: 'wind open' is deprecated; use 'wind wft' instead");
             cmd_open(file.as_ref(), search.as_ref(), *app, *settings)
         }
         Command::Upgrade { check } => cmd_upgrade(*check),
@@ -26,6 +29,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Extract { path, format, include_base64, tabular } => {
             cmd_extract(path, format.as_deref(), *include_base64, *tabular)
         }
+        Command::Wft { action } => cmd_wft(action),
     };
 
     match result {
@@ -138,9 +142,15 @@ pub(crate) fn cmd_write(
     path: &std::path::PathBuf,
     stdin: bool,
     content: Option<&String>,
+    overwrite: bool,
 ) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
     let safe = crate::workspace::safe_path_for_create(&root, path)?;
+
+    // Default deny: check if file exists before writing
+    if safe.exists() && !overwrite {
+        return Err(WindError::FileExists("<file> already exists".to_string()).into());
+    }
 
     let bytes = if stdin {
         use std::io::Read;
@@ -466,6 +476,54 @@ fn cmd_extract(
 
     let output = crate::extract::extract(&safe, force_format, include_base64, tabular)?;
     Ok(serde_json::to_value(output)?)
+}
+
+fn cmd_wft(action: &WftAction) -> anyhow::Result<serde_json::Value> {
+    let wind_action = match action {
+        WftAction::File { path } => {
+            let target = path.to_string_lossy();
+            if target.contains("..") || target.starts_with('/') {
+                return Err(WindError::ActionBlocked("path traversal attempt".to_string()).into());
+            }
+            windlocal::WindAction::Page {
+                kind: windlocal::PageKind::File,
+                target: target.to_string(),
+            }
+        }
+        WftAction::Search { query } => windlocal::WindAction::Page {
+            kind: windlocal::PageKind::Search,
+            target: query.to_string(),
+        },
+        WftAction::App => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowApp,
+        },
+        WftAction::Settings => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowSettings,
+        },
+        WftAction::Workspace => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowWorkspace,
+        },
+        WftAction::Upgrade => windlocal::WindAction::Command {
+            id: windlocal::CommandId::CheckUpgrade,
+        },
+        WftAction::Url { uri } => {
+            let parsed = windlocal::parse(uri)?;
+            windlocal::validate(&parsed)?;
+            return Ok(serde_json::json!({
+                "ok": true,
+                "message": "windlocal URI processed",
+                "action": windlocal::action_to_json(&parsed)
+            }));
+        }
+    };
+
+    windlocal::validate(&wind_action)?;
+    let action_json = windlocal::action_to_json(&wind_action);
+    Ok(serde_json::json!({
+        "ok": true,
+        "message": "windlocal action dispatched to WFT",
+        "action": action_json
+    }))
 }
 
 #[cfg(test)]
