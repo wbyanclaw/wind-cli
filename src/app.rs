@@ -332,7 +332,7 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     let current = env!("CARGO_PKG_VERSION");
     let repo = "wbyanclaw/wind-cli";
     let release_url = format!("https://github.com/{}/releases/latest", repo);
-    let install_command = "$p = \"$env:TEMP\\windcli-install.ps1\"; irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -NoPause";
+    let install_command = recommended_install_command();
 
     // Fetch latest release from GitHub API
     let latest = fetch_latest_version(repo)?;
@@ -354,6 +354,17 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
+fn recommended_install_command() -> &'static str {
+    "$p = \"$env:TEMP\\windcli-install.ps1\"; irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -NoPause"
+}
+
+fn upgrade_network_error_message() -> String {
+    format!(
+        "Could not reach GitHub releases over HTTPS. `windcli upgrade --check` needs access to https://api.github.com. Check these items: 1) run `curl https://github.com` and `curl https://api.github.com`; 2) check company proxy, firewall, or VPN settings; 3) check system date/time and Windows root certificates; 4) check WinHTTP proxy or HTTPS proxy environment variables. Manual download: https://github.com/wbyanclaw/wind-cli/releases/latest. Recommended install command: {}",
+        recommended_install_command()
+    )
+}
+
 /// Fetch latest version from GitHub releases
 fn fetch_latest_version(repo: &str) -> anyhow::Result<String> {
     let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
@@ -361,15 +372,15 @@ fn fetch_latest_version(repo: &str) -> anyhow::Result<String> {
     let response = ureq::get(&url)
         .set("User-Agent", "wind-cli")
         .call()
-        .map_err(|e| anyhow::anyhow!("failed to fetch release info: {}", e))?;
+        .map_err(|_| WindError::NetworkFailed(upgrade_network_error_message()))?;
 
     let json: serde_json::Value = serde_json::from_reader(response.into_reader())
-        .map_err(|e| anyhow::anyhow!("invalid JSON response: {}", e))?;
+        .map_err(|_| WindError::UpgradeResponseInvalid)?;
 
     // Extract tag_name from response (e.g., "v0.1.10" -> "0.1.10")
     let tag = json.get("tag_name")
         .and_then(|t| t.as_str())
-        .ok_or_else(|| anyhow::anyhow!("tag_name not found in release"))?;
+        .ok_or(WindError::UpgradeResponseInvalid)?;
 
     // Strip leading 'v' if present
     let version = tag.strip_prefix('v').unwrap_or(tag);
@@ -408,4 +419,25 @@ fn compare_versions(v1: &str, v2: &str) -> i32 {
 /// Agent Protocol tools dispatcher
 fn cmd_tools(subcommand: &ToolsCommand) -> anyhow::Result<serde_json::Value> {
     tools::run_tools(subcommand.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::upgrade_network_error_message;
+
+    #[test]
+    fn upgrade_network_error_is_actionable() {
+        let message = upgrade_network_error_message();
+
+        assert!(message.contains("curl https://github.com"));
+        assert!(message.contains("curl https://api.github.com"));
+        assert!(message.contains("proxy"));
+        assert!(message.contains("firewall"));
+        assert!(message.contains("system date/time"));
+        assert!(message.contains("Windows root certificates"));
+        assert!(message.contains("https://github.com/wbyanclaw/wind-cli/releases/latest"));
+        assert!(message.contains("ExecutionPolicy Bypass"));
+        assert!(!message.contains("P0"));
+        assert!(!message.contains("ffailed"));
+    }
 }

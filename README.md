@@ -64,13 +64,22 @@ windcli rm notes/hello.txt --yes
 | `tools call <name> --params <json>` | Call one Agent Protocol tool | `windcli tools call read --params '{"path":"notes/a.txt"}'` |
 | `version` | Show version as JSON-like output | `windcli version` |
 | `upgrade` | Show the update-check command; automatic upgrade is not supported yet | `windcli upgrade` |
-| `upgrade --check` | Check GitHub releases for updates; does not install automatically | `windcli upgrade --check` |
+| `upgrade --check` | Check GitHub releases for updates; requires access to `https://api.github.com` and does not install automatically | `windcli upgrade --check` |
 
 All commands support `--json` for machine-readable output.
 
 ```bash
 windcli --json ls notes
 ```
+
+If `windcli upgrade --check` cannot reach GitHub, check network access with:
+
+```powershell
+curl https://github.com
+curl https://api.github.com
+```
+
+Corporate proxy, firewall, VPN, system time, Windows root certificates, and WinHTTP or `HTTPS_PROXY` settings can affect this check. You can always download manually from <https://github.com/wbyanclaw/wind-cli/releases/latest>.
 
 ## Security Rules
 
