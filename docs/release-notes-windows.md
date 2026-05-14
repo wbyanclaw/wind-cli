@@ -23,11 +23,13 @@
 - Fetches latest version from GitHub releases
 - Returns `update_available` flag when new version exists
 - Semantic version comparison
+- `windcli upgrade` now explains that automatic installation is not supported yet and shows the copyable `windcli upgrade --check` command
 
 ## Bug Fixes
 - Fixed `tools call` not executing actual commands
 - Fixed `FILE_EXISTS` error not returned when overwrite=false
 - FileExists error no longer exposes internal workspace paths
+- `windcli upgrade`: replaced internal phase wording with user-facing guidance
 - `install.ps1`: fixed executable name to `windcli.exe`
 - `install.ps1`: replaced the old piped installer with a download-and-run command
 - `install.ps1`: defaults to the latest release, verifies SHA256, updates user PATH, and prints a copyable `-ExecutionPolicy Bypass` command when PowerShell blocks script execution

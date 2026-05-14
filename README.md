@@ -63,7 +63,8 @@ windcli rm notes/hello.txt --yes
 | `tools describe <name>` | Describe one Agent Protocol tool | `windcli tools describe read` |
 | `tools call <name> --params <json>` | Call one Agent Protocol tool | `windcli tools call read --params '{"path":"notes/a.txt"}'` |
 | `version` | Show version as JSON-like output | `windcli version` |
-| `upgrade --check` | Check GitHub releases for updates | `windcli upgrade --check` |
+| `upgrade` | Show the update-check command; automatic upgrade is not supported yet | `windcli upgrade` |
+| `upgrade --check` | Check GitHub releases for updates; does not install automatically | `windcli upgrade --check` |
 
 All commands support `--json` for machine-readable output.
 

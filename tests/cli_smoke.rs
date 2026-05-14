@@ -180,6 +180,29 @@ fn upgrade_check_works() {
         .stdout(predicate::str::contains("version"));
 }
 
+#[test]
+fn bare_upgrade_guides_to_check() {
+    let temp = TempDir::new().unwrap();
+    windcli_cmd(&temp)
+        .arg("upgrade")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("windcli upgrade --check"))
+        .stdout(predicate::str::contains("checking for updates only"))
+        .stdout(predicate::str::contains("P0").not());
+}
+
+#[test]
+fn upgrade_help_describes_check_only() {
+    Command::cargo_bin("windcli")
+        .unwrap()
+        .args(["upgrade", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("does not install").or(predicate::str::contains("不下载或安装")))
+        .stdout(predicate::str::contains("P0").not());
+}
+
 // Backward compatibility: cat/put/rm still work
 #[test]
 fn cat_alias_works() {

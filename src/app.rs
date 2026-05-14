@@ -321,11 +321,18 @@ fn open_file_with_default_app(path: &std::path::Path) -> anyhow::Result<()> {
 
 fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
     if !check {
-        return Err(WindError::Usage("upgrade P0 only supports --check".to_string()).into());
+        return Ok(serde_json::json!({
+            "ok": true,
+            "upgrade_supported": false,
+            "message": "windcli currently supports checking for updates only. Run `windcli upgrade --check` to check the latest release.",
+            "next_command": "windcli upgrade --check"
+        }));
     }
 
     let current = env!("CARGO_PKG_VERSION");
     let repo = "wbyanclaw/wind-cli";
+    let release_url = format!("https://github.com/{}/releases/latest", repo);
+    let install_command = "$p = \"$env:TEMP\\windcli-install.ps1\"; irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 -OutFile $p; powershell -NoProfile -ExecutionPolicy Bypass -File $p -NoPause";
 
     // Fetch latest release from GitHub API
     let latest = fetch_latest_version(repo)?;
@@ -337,10 +344,12 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
         "update_available": update_available,
         "current_version": current,
         "latest_version": latest,
+        "release_url": release_url,
+        "install_command": install_command,
         "message": if update_available {
-            format!("new version {} available", latest)
+            format!("new version {} available. Download it from {} or run the recommended install command.", latest, release_url)
         } else {
-            "you are using the latest version".to_string()
+            "you are using the latest version. windcli upgrade --check only checks releases; it does not install updates automatically.".to_string()
         }
     }))
 }

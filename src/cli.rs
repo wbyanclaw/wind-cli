@@ -103,9 +103,9 @@ pub enum Command {
         settings: bool,
     },
 
-    /// 检查更新（不实际替换二进制）
+    /// 检查更新；当前不会自动下载安装
     Upgrade {
-        /// 仅检查，不下载
+        /// 检查 GitHub release，不下载或安装
         #[arg(long)]
         check: bool,
     },
