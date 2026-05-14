@@ -1,10 +1,10 @@
-# windcli
+# wind
 
-`windcli` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
+`wind` 是一个本地命令行工具，用来给开发者、脚本和 AI Agent 提供一个受控 workspace，让它们只能在明确的目录里读写文件。
 
 ## 解决什么问题
 
-当你需要让自动化工具操作本地文件时，直接开放整个文件系统风险太高。`windcli` 把能力收敛到一个 active workspace：
+当你需要让自动化工具操作本地文件时，直接开放整个文件系统风险太高。`wind` 把能力收敛到一个 active workspace：
 
 - 开发者可以快速初始化一个本地 workspace，并用 CLI 管理其中的文件。
 - AI Agent / 脚本可以通过稳定命令和 `--json` 输出集成，而不是直接访问任意系统路径。
@@ -91,20 +91,20 @@ wind upgrade --check
 
 ```bash
 wind version                           # 输出版本
-wind init [path]                       # 初始化 workspace
-wind ls [path]                         # 列文件
-wind cat <path>                        # 读取文件（≤10MB）
-wind put <path> --stdin                # 从 stdin 写文件
-wind put <path> --file <local-source>  # 从本地文件写
-wind mkdir <path>                      # 创建目录
-wind rm <path>                          # 删除文件/空目录
-wind rm <path> --recursive --yes       # 删除非空目录
-wind rm <path> --dry-run               # 预览删除
-wind open --file <path>                # 打开 workspace 文件
-wind open --search <query>            # 搜索 workspace 内容
-wind open --app                        # 打开应用视图
-wind open --settings                  # 打开设置视图
-wind upgrade --check                   # 检查更新（不替换二进制）
+wind init [path]                      # 初始化 workspace
+wind ls [path]                        # 列文件
+wind cat <path>                       # 读取文件（≤10MB）
+wind put <path> --stdin               # 从 stdin 写文件
+wind put <path> --file <local-source> # 从本地文件写
+wind mkdir <path>                     # 创建目录
+wind rm <path>                        # 删除文件/空目录
+wind rm <path> --recursive --yes      # 删除非空目录
+wind rm <path> --dry-run              # 预览删除
+wind wft file <path>                  # 打开 workspace 文件（WFT 集成）
+wind wft search <query>              # 搜索 workspace 内容
+wind wft app                          # 打开应用视图
+wind wft settings                    # 打开设置视图
+wind upgrade --check                  # 检查更新（不替换二进制）
 
 # 给脚本或 AI Agent 使用结构化输出
 wind --json ls notes
@@ -144,7 +144,7 @@ P0 是 no-follow，但 `ls` 允许展示 symlink 条目，方便用户理解 wor
 
 ## 协议入口说明
 
-`windlocal://` 属于上层产品的内部集成协议，不作为 P0 Windows release 的外部用户命令暴露。终端用户应使用 workspace 文件命令；协议能力需要由上层应用封装后再提供。
+`windlocal://` 属于上层产品的内部集成协议，通过 `wind wft` 命令封装给终端用户使用。WFT 子命令包括：file、search、app、settings、workspace、upgrade、url。
 
 ## JSON 与错误输出
 
@@ -190,7 +190,8 @@ P0 兼容性约定：
 | `src/cli.rs` | 只定义 clap 参数，不放业务逻辑。 |
 | `src/app.rs` | 命令 handler 和调度层，把 CLI 命令转成 workspace 操作。 |
 | `src/workspace/` | workspace 路径安全和文件操作。 |
-| `src/windlocal/` | 内部协议解析预留模块；P0 release 不把它作为用户入口暴露。 |
+| `src/windlocal/` | windlocal:// URI 解析和验证。 |
+| `src/tools.rs` | Agent Protocol 工具接口。 |
 | `src/config.rs` | 平台标准配置路径和 active workspace 持久化。 |
 | `src/errors.rs` | 错误类型、稳定错误码、exit code 和 JSON 错误输出。 |
 | `src/platform/` | OS 抽象预留边界。P0 不启动外部程序。 |

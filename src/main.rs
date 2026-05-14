@@ -5,6 +5,7 @@ mod cli;
 mod config;
 mod errors;
 mod platform;
+mod tools;
 mod windlocal;
 mod workspace;
 

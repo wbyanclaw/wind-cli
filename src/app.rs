@@ -1,10 +1,10 @@
 //! Command dispatcher
 
-use crate::cli::{Cli, Command};
+use crate::cli::{Cli, Command, WftAction};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
+use crate::tools::{self, ToolCall};
 use crate::{windlocal, workspace};
-use std::path::Path;
 use std::path::PathBuf;
 
 pub fn run(cli: Cli) -> anyhow::Result<()> {
@@ -15,7 +15,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
         Command::Init { path } => cmd_init(path),
         Command::Ls { path } => cmd_ls(path),
         Command::Cat { path } => cmd_cat(path),
-        Command::Put { path, stdin, file } => cmd_put(path, *stdin, file.as_ref()),
+        Command::Put { path, stdin, file, overwrite } => cmd_put(path, *stdin, file.as_ref(), *overwrite),
         Command::Mkdir { path } => cmd_mkdir(path),
         Command::Rm {
             path,
@@ -28,8 +28,14 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             search,
             app,
             settings,
-        } => cmd_open(file.as_ref(), search.as_ref(), *app, *settings),
+        } => {
+            // Deprecated - show warning and route to wft
+            eprintln!("warning: 'windcli open' is deprecated; use 'windcli wft' instead");
+            cmd_open(file.as_ref(), search.as_ref(), *app, *settings)
+        }
         Command::Upgrade { check } => cmd_upgrade(*check),
+        Command::Tools { list, call, args, tool_help } => cmd_tools(*list, call.as_deref(), args.as_deref(), tool_help.as_deref()),
+        Command::Wft { action } => cmd_wft(action),
     };
 
     match result {
@@ -148,9 +154,15 @@ fn cmd_put(
     path: &PathBuf,
     stdin: bool,
     file: Option<&PathBuf>,
+    overwrite: bool,
 ) -> anyhow::Result<serde_json::Value> {
     let root = get_workspace_root()?;
     let safe = workspace::safe_path_for_create(&root, path)?;
+
+    // C-2: Default deny - check if file exists before writing
+    if safe.exists() && !overwrite {
+        return Err(WindError::PathExists(safe.display().to_string()).into());
+    }
 
     let content = if stdin {
         // Read from stdin until EOF
@@ -269,5 +281,100 @@ fn cmd_upgrade(check: bool) -> anyhow::Result<serde_json::Value> {
         "ok": true,
         "current_version": current,
         "message": "upgrade check: this version can report available updates; automatic self-update is not available in this release"
+    }))
+}
+
+fn cmd_tools(
+    list: bool,
+    call: Option<&str>,
+    args: Option<&str>,
+    help: Option<&str>,
+) -> anyhow::Result<serde_json::Value> {
+    // Handle --help flag
+    if let Some(tool_name) = help {
+        let args_json = if tool_name.is_empty() {
+            serde_json::Value::Object(serde_json::Map::new())
+        } else {
+            serde_json::json!({ "tool": tool_name })
+        };
+        return tools::call_tool(&tools::ToolCall {
+            name: "help".to_string(),
+            arguments: args_json,
+        });
+    }
+
+    // Handle --list flag
+    if list {
+        return tools::call_tool(&tools::ToolCall {
+            name: "help".to_string(),
+            arguments: serde_json::Value::Object(serde_json::Map::new()),
+        });
+    }
+
+    // Handle --call flag
+    let tool_name = call.ok_or_else(|| WindError::Usage("tools requires --call <tool_name>".to_string()))?;
+
+    let arguments = if let Some(args_str) = args {
+        serde_json::from_str(args_str)
+            .map_err(|e| WindError::Usage(format!("invalid JSON arguments: {}", e)))?
+    } else {
+        serde_json::Value::Object(serde_json::Map::new())
+    };
+
+    let result = tools::handle_tools_call(&tools::ToolCall {
+        name: tool_name.to_string(),
+        arguments,
+    });
+
+    Ok(serde_json::to_value(result)
+        .map_err(|e| WindError::Usage(format!("failed to serialize result: {}", e)))?)
+}
+
+fn cmd_wft(action: &WftAction) -> anyhow::Result<serde_json::Value> {
+    let wind_action = match action {
+        WftAction::File { path } => {
+            let target = path.to_string_lossy();
+            if target.contains("..") || target.starts_with('/') {
+                return Err(WindError::ActionBlocked("path traversal attempt".to_string()).into());
+            }
+            windlocal::WindAction::Page {
+                kind: windlocal::PageKind::File,
+                target: target.to_string(),
+            }
+        }
+        WftAction::Search { query } => windlocal::WindAction::Page {
+            kind: windlocal::PageKind::Search,
+            target: query.to_string(),
+        },
+        WftAction::App => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowApp,
+        },
+        WftAction::Settings => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowSettings,
+        },
+        WftAction::Workspace => windlocal::WindAction::Command {
+            id: windlocal::CommandId::ShowWorkspace,
+        },
+        WftAction::Upgrade => windlocal::WindAction::Command {
+            id: windlocal::CommandId::CheckUpgrade,
+        },
+        WftAction::Url { uri } => {
+            // Parse the URI and validate it
+            let parsed = windlocal::parse(uri)?;
+            windlocal::validate(&parsed)?;
+            return Ok(serde_json::json!({
+                "ok": true,
+                "message": "windlocal URI processed",
+                "action": windlocal::action_to_json(&parsed)
+            }));
+        }
+    };
+
+    windlocal::validate(&wind_action)?;
+    let action_json = windlocal::action_to_json(&wind_action);
+    Ok(serde_json::json!({
+        "ok": true,
+        "message": "windlocal action dispatched to WFT",
+        "action": action_json
     }))
 }

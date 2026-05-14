@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "windcli",
-    about = "windcli CLI — 受控 workspace 文件管理",
+    name = "wind",
+    about = "wind CLI — 受控 workspace 文件管理",
     version
 )]
 pub struct Cli {
@@ -58,6 +58,10 @@ pub enum Command {
         /// 从指定本地文件读取内容
         #[arg(long, short = 'f')]
         file: Option<std::path::PathBuf>,
+
+        /// 允许覆盖已存在的文件（默认拒绝覆盖）
+        #[arg(long)]
+        overwrite: bool,
     },
 
     /// 创建目录
@@ -84,7 +88,7 @@ pub enum Command {
         dry_run: bool,
     },
 
-    /// 打开文件或应用（内部使用 windlocal 协议封装）
+    /// 打开文件或应用（内部使用 windlocal 协议封装）【已弃用，请使用 wft】
     Open {
         /// 打开 workspace 内的文件
         #[arg(long, short = 'f')]
@@ -103,11 +107,69 @@ pub enum Command {
         settings: bool,
     },
 
+    /// WFT (Wind Financial Terminal) 集成命令
+    Wft {
+        #[command(subcommand)]
+        action: WftAction,
+    },
+
     /// 检查更新（不实际替换二进制）
     Upgrade {
         /// 仅检查，不下载
         #[arg(long)]
         check: bool,
+    },
+
+    /// Agent Protocol 工具接口
+    Tools {
+        /// 列出所有可用工具
+        #[arg(long)]
+        list: bool,
+
+        /// 调用指定工具（JSON 格式参数）
+        #[arg(long, value_name = "TOOL_NAME")]
+        call: Option<String>,
+
+        /// 工具参数（JSON 格式）
+        #[arg(long, value_name = "JSON")]
+        args: Option<String>,
+
+        /// 显示工具帮助
+        #[arg(long)]
+        tool_help: Option<String>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum WftAction {
+    /// 打开 workspace 内的文件
+    File {
+        /// 文件路径
+        path: std::path::PathBuf,
+    },
+
+    /// 在 workspace 内搜索
+    Search {
+        /// 搜索关键词
+        query: String,
+    },
+
+    /// 打开应用视图
+    App,
+
+    /// 打开设置视图
+    Settings,
+
+    /// 显示工作区信息
+    Workspace,
+
+    /// 检查更新
+    Upgrade,
+
+    /// 直接传递 windlocal URI
+    Url {
+        /// windlocal URI
+        uri: String,
     },
 }
 

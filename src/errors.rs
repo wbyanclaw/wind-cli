@@ -27,6 +27,7 @@ pub const ERR_SYMLINK_NOT_SUPPORTED: &str = "SYMLINK_NOT_SUPPORTED";
 pub const ERR_PATH_OUTSIDE_WORKSPACE: &str = "PATH_OUTSIDE_WORKSPACE";
 pub const ERR_PATH_NOT_FOUND: &str = "PATH_NOT_FOUND";
 pub const ERR_PATH_EXISTS: &str = "PATH_EXISTS";
+pub const ERR_FILE_EXISTS: &str = "FILE_EXISTS";
 pub const ERR_PATH_IS_DIR: &str = "PATH_IS_DIR";
 pub const ERR_PATH_IS_NOT_DIR: &str = "PATH_IS_NOT_DIR";
 pub const ERR_ATOMIC_RENAME_FAILED: &str = "ATOMIC_RENAME_FAILED";
@@ -36,6 +37,7 @@ pub const ERR_DISK_FULL: &str = "DISK_FULL";
 pub const ERR_NO_ACTIVE_WORKSPACE: &str = "NO_ACTIVE_WORKSPACE";
 pub const ERR_DIR_NOT_EMPTY: &str = "DIR_NOT_EMPTY";
 pub const ERR_GLOB_NOT_ALLOWED: &str = "GLOB_NOT_ALLOWED";
+pub const ERR_HIGH_RISK_REQUIRED_FORCE: &str = "HIGH_RISK_REQUIRED_FORCE";
 
 // windlocal / URI / action schema: 200-299
 pub const ERR_INVALID_SCHEME: &str = "INVALID_SCHEME";
@@ -81,6 +83,9 @@ pub enum WindError {
     #[error("path already exists: {0}")]
     PathExists(String),
 
+    #[error("file already exists: {0}")]
+    FileExists(String),
+
     #[error("path is a directory: {0}")]
     PathIsDir(String),
 
@@ -107,6 +112,9 @@ pub enum WindError {
 
     #[error("glob/wildcard is not allowed")]
     GlobNotAllowed,
+
+    #[error("high-risk operation requires --force: {0}")]
+    HighRiskRequiredForce(String),
 
     #[error("invalid URI scheme: {0}")]
     InvalidScheme(String),
@@ -162,10 +170,12 @@ impl WindError {
             | Self::PathOutsideWorkspace(_)
             | Self::PathNotFound(_)
             | Self::PathExists(_)
+            | Self::FileExists(_)
             | Self::PathIsDir(_)
             | Self::PathIsNotDir(_)
             | Self::DirNotEmpty(_)
-            | Self::NoActiveWorkspace => EXIT_WORKSPACE,
+            | Self::NoActiveWorkspace
+            | Self::HighRiskRequiredForce(_) => EXIT_WORKSPACE,
 
             Self::InvalidScheme(_)
             | Self::InvalidActionType
@@ -200,6 +210,7 @@ impl WindError {
             Self::PathOutsideWorkspace(_) => ERR_PATH_OUTSIDE_WORKSPACE,
             Self::PathNotFound(_) => ERR_PATH_NOT_FOUND,
             Self::PathExists(_) => ERR_PATH_EXISTS,
+            Self::FileExists(_) => ERR_FILE_EXISTS,
             Self::PathIsDir(_) => ERR_PATH_IS_DIR,
             Self::PathIsNotDir(_) => ERR_PATH_IS_NOT_DIR,
             Self::AtomicRenameFailed(_) => ERR_ATOMIC_RENAME_FAILED,
@@ -209,6 +220,7 @@ impl WindError {
             Self::NoActiveWorkspace => ERR_NO_ACTIVE_WORKSPACE,
             Self::DirNotEmpty(_) => ERR_DIR_NOT_EMPTY,
             Self::GlobNotAllowed => ERR_GLOB_NOT_ALLOWED,
+            Self::HighRiskRequiredForce(_) => ERR_HIGH_RISK_REQUIRED_FORCE,
             Self::InvalidScheme(_) => ERR_INVALID_SCHEME,
             Self::InvalidActionType => ERR_INVALID_ACTION_TYPE,
             Self::InvalidPageKind(_) => ERR_INVALID_PAGE_KIND,
