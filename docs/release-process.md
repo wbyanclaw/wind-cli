@@ -17,9 +17,7 @@ git checkout main
 git pull origin main
 ```
 
-Make sure all desired changes are merged and tested.
-
-### Step 2: Run the full CI suite
+Make sure all desired changes are merged. The CI will automatically run the full test suite on tag push — running locally first is optional but recommended to catch obvious issues:
 
 ```bash
 cargo test --all-targets
@@ -27,9 +25,9 @@ cargo clippy --all-targets
 cargo build --release
 ```
 
-All tests must pass before tagging.
+All tests should pass before tagging.
 
-### Step 3: Tag the release
+### Step 2: Tag the release
 
 **Important**: Create an **annotated tag** (not a lightweight tag), and push the **tag** (not a branch).
 
@@ -41,7 +39,7 @@ git push origin v0.2.2
 
 **Do NOT create a branch named `v0.2.x`**. The CI workflow triggers on tag pushes (`refs/tags/v*`), not branch pushes.
 
-### Step 4: Watch the CI
+### Step 3: Watch the CI
 
 The GitHub Actions workflow `.github/workflows/windows-release.yml` will automatically:
 
@@ -57,7 +55,7 @@ Monitor the run at:
 https://github.com/wbyanclaw/wind-cli/actions
 ```
 
-### Step 5: Verify the release
+### Step 4: Verify the release
 
 After CI completes:
 
@@ -113,7 +111,7 @@ For an urgent hotfix (e.g., v0.2.1 → v0.2.2):
 
 1. Create a fix branch from the tag: `git checkout -b fix/description v0.2.1`
 2. Apply the fix and commit
-3. Tag and push following Step 3 above
+3. Tag and push following Step 2 above
 
 ## Release cadence
 
