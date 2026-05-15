@@ -111,4 +111,4 @@ wind-cli（统一入口，单一 Rust 二进制）
 - 流式输出
 
 ## 8. Mockup
-- Fintech 风格 v4：https://gist.github.com/wbyanclaw/8c29cd7ec0dac07189ea6233cf735427
+- Fintech 风格 v4：https://github.com/wbyanclaw/wind-cli/blob/main/docs/wind-demo-mockup.html
