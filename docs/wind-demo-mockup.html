@@ -30,7 +30,22 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', -apple-system, 'PingFang SC', system-ui, sans-serif; }
 
-    /* Custom scrollbar */
+    /* Right sidebar slide */
+    #rightPanel {
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 50;
+      box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+    }
+    #rightPanel.open {
+      transform: translateX(0);
+    }
+
+  /* Custom scrollbar */
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
@@ -91,82 +106,55 @@
       Claude API 已连接
     </div>
     <span class="text-faint text-xs px-2 py-1 bg-slate-50 border border-border rounded-full">v0.2.1</span>
+    <!-- Detail toggle -->
+    <button onclick="toggleDetail()" id="detailBtn" class="flex items-center gap-1.5 text-xs text-muted hover:text-brand border border-border rounded-lg px-3 py-1.5 transition-colors bg-white">
+      <i data-lucide="panel-right" class="w-3.5 h-3.5"></i>
+      查看详情
+    </button>
   </header>
 
   <!-- ── Main ── -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- Left: Unified File Tree (LLM Wiki + Workspace) -->
-    <aside class="w-56 bg-white border-r border-border flex flex-col flex-shrink-0">
+    <!-- Left: File Tree -->
+    <aside class="w-52 bg-white border-r border-border flex flex-col flex-shrink-0">
       <div class="px-4 py-3 border-b border-border">
         <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-muted uppercase tracking-wide">文件</span>
-          <span class="text-[10px] text-faint bg-slate-100 px-1.5 py-0.5 rounded-full border border-border">wind-wiki/</span>
+          <span class="text-[11px] font-semibold text-muted uppercase tracking-wide">工作区</span>
+          <span class="text-[10px] text-faint bg-slate-100 px-1.5 py-0.5 rounded-full border border-border">4 项</span>
         </div>
       </div>
       <div class="flex-1 overflow-y-auto py-2">
 
-        <!-- 工作区 -->
         <div class="px-3 pb-1">
-          <span class="text-[10px] font-semibold text-faint uppercase tracking-wide px-2 py-1 block">📂 工作区</span>
+          <span class="text-[10px] font-semibold text-faint uppercase tracking-wide px-2 py-1 block">文件</span>
         </div>
+
         <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-ink font-medium flex items-center gap-2">
           <i data-lucide="folder" class="w-4 h-4 text-amber-500" style="stroke-width:1.5"></i>
           workspace/
         </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
+        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50" onclick="highlight(this)">
           <i data-lucide="file-text" class="w-4 h-4 text-slate-400" style="stroke-width:1.5"></i>
           <span class="flex-1 truncate">greeting.txt</span>
+          <span class="text-[10px] text-faint">11B</span>
+        </div>
+        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50" onclick="highlight(this)">
+          <i data-lucide="file-text" class="w-4 h-4 text-slate-400" style="stroke-width:1.5"></i>
+          <span class="flex-1 truncate">hello.txt</span>
           <span class="text-[10px] text-faint">11B</span>
         </div>
         <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-ink font-medium flex items-center gap-2 hover:bg-slate-50">
           <i data-lucide="folder" class="w-4 h-4 text-amber-400" style="stroke-width:1.5"></i>
           notes/
         </div>
-
-        <!-- raw: source files -->
-        <div class="px-3 pb-1 mt-3">
-          <span class="text-[10px] font-semibold text-orange-400 uppercase tracking-wide px-2 py-1 block">📥 raw</span>
-        </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="file-text" class="w-4 h-4 text-orange-300" style="stroke-width:1.5"></i>
-          <span class="flex-1 truncate">Q1-report.pdf</span>
-        </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="file-text" class="w-4 h-4 text-orange-300" style="stroke-width:1.5"></i>
-          <span class="flex-1 truncate">市场分析.docx</span>
-        </div>
-
-        <!-- wiki: AI knowledge base -->
-        <div class="px-3 pb-1 mt-3">
-          <span class="text-[10px] font-semibold text-purple-400 uppercase tracking-wide px-2 py-1 block">🧠 wiki</span>
-        </div>
         <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-ink font-medium flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="folder" class="w-4 h-4 text-purple-300" style="stroke-width:1.5"></i>
-          pages/
-        </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="file-text" class="w-4 h-4 text-purple-300" style="stroke-width:1.5"></i>
-          <span class="flex-1 truncate">Q1摘要.md</span>
-        </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="file-text" class="w-4 h-4 text-purple-300" style="stroke-width:1.5"></i>
-          <span class="flex-1 truncate">WFT集成.md</span>
+          <i data-lucide="folder" class="w-4 h-4 text-amber-400" style="stroke-width:1.5"></i>
+          docs/
         </div>
 
-        <!-- SYSTEM.md -->
         <div class="px-3 pb-1 mt-3">
-          <span class="text-[10px] font-semibold text-blue-400 uppercase tracking-wide px-2 py-1 block">⚙️ SYSTEM.md</span>
-        </div>
-        <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
-          <i data-lucide="scroll-text" class="w-4 h-4 text-blue-300" style="stroke-width:1.5"></i>
-          <span class="flex-1 truncate">SYSTEM.md</span>
-          <span class="text-[10px] text-blue-400 bg-blue-50 px-1 rounded">行为准则</span>
-        </div>
-
-        <!-- AI 工具 -->
-        <div class="px-3 pb-1 mt-3">
-          <span class="text-[10px] font-semibold text-faint uppercase tracking-wide px-2 py-1 block">⚙️ AI 工具</span>
+          <span class="text-[10px] font-semibold text-faint uppercase tracking-wide px-2 py-1 block">工具链</span>
         </div>
         <div class="tree-item px-4 py-1.5 cursor-pointer rounded-lg mx-2 text-sm text-muted flex items-center gap-2 hover:bg-slate-50">
           <i data-lucide="terminal" class="w-4 h-4 text-brand" style="stroke-width:1.5"></i>
@@ -179,8 +167,6 @@
         </div>
       </div>
     </aside>
-
-
 
     <!-- Center: Chat -->
     <main class="flex-1 flex flex-col min-w-0 bg-slate-50">
@@ -235,8 +221,8 @@
       </div>
     </main>
 
-    <!-- Right: Wiki + Config -->
-    <aside class="w-56 bg-white border-l border-border flex flex-col flex-shrink-0 overflow-y-auto">
+    <!-- Right: Wiki + Config (collapsible) -->
+    <aside id="rightPanel" class="w-64 bg-white border-l border-border flex flex-col flex-shrink-0 overflow-y-auto">
 
       <!-- Wiki -->
       <div class="px-4 py-4 border-b border-border">
@@ -244,37 +230,28 @@
           <i data-lucide="book-open" class="w-3.5 h-3.5 text-muted"></i>
           <span class="text-[11px] font-semibold text-muted uppercase tracking-wide">知识库</span>
         </div>
-        <!-- LLM Wiki Pipeline -->
-        <div class="text-[11px] font-semibold text-muted mb-2">Pipeline</div>
-        <div class="space-y-1">
-          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-100 text-xs text-emerald-700">
-            <i data-lucide="arrow-down-to-dot" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
-            <span class="flex-1"><strong>Ingest:</strong> raw → wiki</span>
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-purple-300 hover:bg-purple-50 cursor-pointer transition-colors text-xs text-muted">
+            <i data-lucide="book" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0"></i>
+            <span class="flex-1 truncate">wind-cli 使用指南</span>
+            <span class="text-[10px] text-purple-400 bg-purple-50 px-1.5 py-0.5 rounded">文档</span>
           </div>
-          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-blue-500 flex-shrink-0"></i>
-            <span class="flex-1"><strong>Query:</strong> AI 读 wiki 回答</span>
+          <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-brand hover:bg-brandLight cursor-pointer transition-colors text-xs text-muted">
+            <i data-lucide="code-2" class="w-3.5 h-3.5 text-brand flex-shrink-0"></i>
+            <span class="flex-1 truncate">Agent Protocol 规范</span>
+            <span class="text-[10px] text-brand bg-brandLight px-1.5 py-0.5 rounded">API</span>
           </div>
-          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-700">
-            <i data-lucide="scan-search" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0"></i>
-            <span class="flex-1"><strong>Lint:</strong> 定时审计修复</span>
+          <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer transition-colors text-xs text-muted">
+            <i data-lucide="globe" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+            <span class="flex-1 truncate">WFT 集成说明</span>
+            <span class="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">集成</span>
           </div>
-        </div>
-        <!-- Source files -->
-        <div class="text-[11px] font-semibold text-muted mt-3 mb-2">raw 源文件</div>
-        <div class="space-y-1">
-          <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-orange-300 hover:bg-orange-50 cursor-pointer transition-colors text-xs text-muted">
-            <i data-lucide="file-text" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i>
-            <span class="flex-1 truncate">Q1-report.pdf</span>
-            <span class="text-[10px] text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">raw</span>
-          </div>
-          <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-orange-300 hover:bg-orange-50 cursor-pointer transition-colors text-xs text-muted">
-            <i data-lucide="file-text" class="w-3.5 h-3.5 text-orange-400 flex-shrink-0"></i>
-            <span class="flex-1 truncate">市场分析.docx</span>
-            <span class="text-[10px] text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">raw</span>
+          <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border bg-slate-50 hover:border-amber-300 hover:bg-amber-50 cursor-pointer transition-colors text-xs text-muted">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0"></i>
+            <span class="flex-1 truncate">安全模型文档</span>
+            <span class="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">安全</span>
           </div>
         </div>
-
       </div>
 
       <!-- Protocol -->
@@ -468,27 +445,10 @@
       resize(inp);
       msgs.scrollTop = msgs.scrollHeight;
 
-      // Tool result — try real wind-cli via Tauri, fall back to mock
-      setTimeout(async () => {
+      // Tool result
+      setTimeout(() => {
         const el = document.getElementById(aid + '-bubble');
         if (!el) return;
-
-        let result = s.result;
-        let status = '执行成功';
-        let statusClass = 'success';
-
-        if (isTauri()) {
-          const r = await tauriRun(s.cmd);
-          if (r) {
-            result = r.data || { ok: r.ok, exit_code: r.exit_code, message: r.stdout || r.stderr };
-            status = r.ok ? '执行成功' : '执行失败';
-            statusClass = r.ok ? 'success' : 'error';
-          }
-        }
-
-        const statusBg = statusClass === 'success' ? 'bg-successBg text-success border-emerald-200' : 'bg-red-50 text-red-600 border-red-200';
-        const statusIcon = statusClass === 'success' ? '✓' : '✗';
-
         el.innerHTML = `${escape(s.reply)}
           <div class="mt-3 rounded-lg border border-border overflow-hidden">
             <div class="bg-slate-50 border-b border-border px-3 py-2 flex items-center gap-1.5">
@@ -497,13 +457,12 @@
             </div>
             <div class="px-3 py-2.5">
               <div class="flex items-center gap-1.5 mb-2">
-                <span class="text-[10px] ${statusBg} border px-1.5 py-0.5 rounded-full font-medium">${statusIcon} ${escape(status)}</span>
+                <span class="text-[10px] bg-successBg text-success border border-emerald-200 px-1.5 py-0.5 rounded-full font-medium">✓ 执行成功</span>
               </div>
               <div class="tool-cmd bg-slate-50 border border-border rounded px-2.5 py-1.5 text-[12px] text-brand mb-2">$ ${escape(s.cmd)}</div>
-              <pre class="text-[11px] text-muted leading-relaxed overflow-x-auto">${highlightJSON(result)}</pre>
+              <pre class="text-[11px] text-muted leading-relaxed overflow-x-auto">${highlightJSON(s.result)}</pre>
             </div>
           </div>`;
-        lucide.createIcons();
         msgs.scrollTop = msgs.scrollHeight;
       }, 900);
 
@@ -514,67 +473,28 @@
       }, 2000);
     }
 
-    // ── Tauri integration ────────────────────────────────────
-    const isTauri = () => typeof window.__TAURI__ !== 'undefined';
-
-    async function tauriRun(cmd) {
-      if (!isTauri()) return null;
-      try {
-        const { invoke } = window.__TAURI__.core;
-        return await invoke('run_wind_command', { args: cmd });
-      } catch {
-        return null;
-      }
-    }
-
-    async function tauriCheck() {
-      if (!isTauri()) return null;
-      try {
-        const { invoke } = window.__TAURI__.core;
-        return await invoke('check_windcli');
-      } catch {
-        return null;
-      }
-    }
-
-    async function tauriInit() {
-      if (!isTauri()) return null;
-      try {
-        const { invoke } = window.__TAURI__.core;
-        return await invoke('init_demo_workspace');
-      } catch {
-        return null;
-      }
-    }
-
-    // ── Init on load ─────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', async () => {
-      if (isTauri()) {
-        // Try to init demo workspace and show real status
-        const status = await tauriCheck();
-        if (status) {
-          const badge = document.querySelector('.api-badge');
-          if (badge) {
-            if (status.found === 'true') {
-              badge.textContent = 'wind-cli 已安装';
-              badge.style.background = 'var(--successBg)';
-              badge.style.color = 'var(--success)';
-            } else {
-              badge.textContent = 'wind-cli 未安装';
-              badge.style.background = '#fef2f2';
-              badge.style.color = '#dc2626';
-            }
-          }
-        }
-        await tauriInit();
-      }
-    });
-
     function copyCmd(btn) {
       navigator.clipboard.writeText('irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 | iex').then(() => {
         btn.textContent = '已复制';
         setTimeout(() => btn.textContent = '复制', 1500);
       });
+    }
+
+    function toggleDetail() {
+      const panel = document.getElementById('rightPanel');
+      const btn = document.getElementById('detailBtn');
+      if (!panel) return;
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) {
+        btn.innerHTML = '<i data-lucide="panel-right-close" class="w-3.5 h-3.5"></i>收起详情';
+        btn.style.color = 'var(--brand)';
+        btn.style.borderColor = 'var(--brand)';
+      } else {
+        btn.innerHTML = '<i data-lucide="panel-right" class="w-3.5 h-3.5"></i>查看详情';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }
+      lucide.createIcons();
     }
   </script>
 </body>
