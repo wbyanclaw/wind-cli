@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wind-demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'SF Mono', monospace;
+      background: #0d1117;
+      color: #e6edf3;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 10px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+    }
+    .header-title { font-size: 15px; font-weight: 600; color: #58a6ff; }
+    .header-title span { color: #8b949e; font-size: 12px; font-weight: 400; margin-left: 8px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .api-status { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: #21262d; border: 1px solid #30363d; color: #3fb950; }
+    .api-status.offline { color: #8b949e; border-color: #484f58; }
+
+    /* ── Main: conversation + trace ── */
+    .main { flex: 1; display: flex; gap: 10px; min-height: 0; }
+
+    /* ── Conversation (left, wider) ── */
+    .conversation {
+      flex: 1.6;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .conv-header {
+      padding: 8px 14px;
+      background: #0d1117;
+      border-bottom: 1px solid #30363d;
+      border-radius: 8px 8px 0 0;
+      font-size: 11px;
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .conv-header .dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; }
+    .conv-header strong { color: #e6edf3; font-size: 12px; }
+
+    .conv-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .conv-msg { display: flex; gap: 8px; max-width: 88%; }
+    .conv-msg.human { align-self: flex-end; flex-direction: row-reverse; }
+    .conv-msg.agent { align-self: flex-start; }
+
+    .conv-avatar {
+      width: 26px; height: 26px;
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .conv-msg.human .conv-avatar { background: #1f6feb; }
+    .conv-msg.agent .conv-avatar { background: #238636; }
+
+    .conv-body { display: flex; flex-direction: column; gap: 2px; }
+    .conv-meta { font-size: 10px; color: #484f58; padding: 0 2px; }
+    .conv-msg.human .conv-meta { text-align: right; }
+    .conv-text {
+      padding: 9px 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      line-height: 1.55;
+      background: #21262d;
+      border: 1px solid #30363d;
+    }
+    .conv-msg.human .conv-text { background: #1f3a5f; border-color: #388bfd; }
+    .conv-msg.agent .conv-text { white-space: pre-wrap; }
+
+    .conv-input-area {
+      padding: 10px 12px;
+      border-top: 1px solid #30363d;
+      background: #0d1117;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .conv-input-label { font-size: 10px; color: #484f58; }
+    .conv-input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .conv-input {
+      flex: 1;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 9px 11px;
+      color: #e6edf3;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      resize: none;
+      min-height: 40px;
+      max-height: 90px;
+      transition: border-color 0.15s;
+    }
+    .conv-input:focus { border-color: #58a6ff; }
+    .conv-input::placeholder { color: #484f58; }
+    .conv-send {
+      padding: 9px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #1f6feb;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .conv-send:hover { background: #388bfd; }
+    .conv-hint { font-size: 10px; color: #3fb950; }
+
+    /* ── Execution Trace (right panel) ── */
+    .trace-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 260px;
+    }
+
+    .trace-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .trace-header {
+      padding: 7px 12px;
+      background: #0d1117;
+      border-bottom: 1px solid #30363d;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .trace-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .trace-content pre { white-space: pre-wrap; word-break: break-word; }
+
+    /* JSON highlighting */
+    .j-key { color: #79c0ff; }
+    .j-string { color: #a5d6ff; }
+    .j-number { color: #f2cc60; }
+    .j-bool { color: #ff7b72; }
+    .j-null { color: #8b949e; }
+
+    /* Step in trace */
+    .step {
+      padding: 6px 8px;
+      border-radius: 5px;
+      margin-bottom: 6px;
+      border: 1px solid #30363d;
+    }
+    .step.human-step { background: #0d1420; border-color: #1f3a5f; }
+    .step.agent-step { background: #0d1a0f; border-color: #1f3d26; }
+    .step.cmd-step { background: #0d1117; border-color: #30363d; }
+    .step.result-step { background: #0d1117; border-color: #30363d; }
+
+    .step-label { font-size: 10px; color: #8b949e; margin-bottom: 3px; }
+    .step-content { font-size: 12px; }
+    .step-content.cmd { color: #58a6ff; font-family: 'SF Mono', monospace; }
+    .step-content.ok { color: #3fb950; }
+    .step-content.error { color: #ff7b72; }
+
+    /* Protocol diagram */
+    .diagram-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .diagram-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #8b949e; margin-bottom: 8px; }
+    .diagram-flow { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+    .d-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .d-node { padding: 3px 9px; background: #0d1117; border: 1px solid #30363d; border-radius: 4px; }
+    .d-node.blue { border-color: #388bfd; color: #58a6ff; }
+    .d-node.green { border-color: #238636; color: #3fb950; }
+    .d-node.purple { border-color: #a371f7; color: #bc8cff; }
+    .d-node.yellow { border-color: #9e6a03; color: #f2cc60; }
+    .d-arrow { color: #484f58; font-size: 13px; }
+    .d-sub { padding-left: 16px; font-size: 11px; color: #484f58; }
+
+    /* API Config */
+    .config-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .config-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #8b949e; margin-bottom: 6px; }
+    .config-row { display: flex; gap: 6px; margin-bottom: 4px; font-size: 11px; }
+    .config-label { color: #8b949e; width: 48px; flex-shrink: 0; }
+    .config-value { color: #e6edf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .config-value .model { color: #58a6ff; }
+    .config-badge { font-size: 10px; padding: 1px 7px; border-radius: 8px; background: #1f3d26; border: 1px solid #238636; color: #3fb950; margin-left: auto; }
+
+    /* welcome */
+    .welcome-trace {
+      color: #484f58;
+      font-size: 12px;
+      text-align: center;
+      padding: 20px 10px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">wind-demo <span>Human ↔ AI Agent ↔ wind CLI</span></div>
+    <div class="header-right">
+      <div class="api-status" id="apiStatus">API: Not configured</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Conversation -->
+    <div class="conversation">
+      <div class="conv-header">
+        <div class="dot"></div>
+        <strong>Conversation</strong>
+        <span>· AI Agent with tool-calling</span>
+      </div>
+
+      <div class="conv-messages" id="convMessages">
+        <div class="conv-msg agent">
+          <div class="conv-avatar">🤖</div>
+          <div class="conv-body">
+            <div class="conv-meta">AI Agent</div>
+            <div class="conv-text">Hello! I'm your AI Agent, powered by wind-cli. I can help you manage files in your workspace using natural language.
+
+Try saying something like:
+• "List all files in the workspace"
+• "Create a notes directory"
+• "Write hello.txt with 'Hello wind!'"
+• "Open greeting.txt in WFT"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="conv-input-area">
+        <div class="conv-input-label">Your message (natural language)</div>
+        <div class="conv-input-row">
+          <textarea class="conv-input" id="convInput" rows="1" placeholder='e.g. "帮我创建一个 notes 目录"' onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="conv-send" onclick="sendMsg()">Send</button>
+        </div>
+        <div class="conv-hint">AI Agent will call wind-cli tools to fulfill your request</div>
+      </div>
+    </div>
+
+    <!-- Trace panel -->
+    <div class="trace-panel">
+
+      <!-- Execution trace -->
+      <div class="trace-card">
+        <div class="trace-header">⚡ Execution Trace</div>
+        <div class="trace-content" id="traceContent">
+          <div class="welcome-trace">
+            Execution trace will appear here<br>as AI Agent calls wind-cli tools
+          </div>
+        </div>
+      </div>
+
+      <!-- Protocol diagram -->
+      <div class="diagram-card">
+        <div class="diagram-title">Protocol Flow</div>
+        <div class="diagram-flow">
+          <div class="d-row">
+            <div class="d-node blue">You (NL)</div>
+            <span class="d-arrow">↔</span>
+            <div class="d-node green">AI Agent</div>
+            <span class="d-arrow">→</span>
+            <div class="d-node blue">wind CLI</div>
+          </div>
+          <div class="d-sub">wind CLI →</div>
+          <div class="d-row">
+            <span class="d-arrow">→</span>
+            <div class="d-node">Workspace</div>
+            <span class="d-arrow">or</span>
+            <div class="d-node purple">windlocal://</div>
+            <span class="d-arrow">→</span>
+            <div class="d-node yellow">WFT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Config -->
+      <div class="config-card">
+        <div class="config-title">🔑 API Configuration</div>
+        <div class="config-row">
+          <div class="config-label">Endpoint</div>
+          <div class="config-value">https://api.anthropic.com/v1/messages</div>
+          <span class="config-badge">Claude</span>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Model</div>
+          <div class="config-value"><span class="model">claude-sonnet-4-20250514</span></div>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Tools</div>
+          <div class="config-value">windcli (9 tools)</div>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Status</div>
+          <div class="config-value" style="color:#3fb950">Connected ✓</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ─── Auto-resize textarea ─────────────────────────────────
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMsg();
+      }
+    }
+
+    // ─── Demo scenarios ───────────────────────────────────────
+    const scenarios = {
+      ls: {
+        human: '"List all files in the workspace"',
+        agent: 'I\'ll list the files in your workspace using the `ls` tool.',
+        toolCall: 'windcli ls',
+        result: { ok: true, data: { path: '/tmp/wind-demo-001/', entries: [{ name: 'greeting.txt', kind: 'file', size: 11 }, { name: 'notes', kind: 'dir' }] } },
+        agentFinal: 'Here are the files in your workspace:\n\n• greeting.txt (file, 11 bytes)\n• notes/ (directory)\n\nAll operations are confined to your workspace for safety.'
+      },
+      mkdir: {
+        human: '"帮我创建一个 notes 目录"',
+        agent: 'Creating a new directory called "notes" for you.',
+        toolCall: 'windcli mkdir notes',
+        result: { ok: true, data: { path: 'notes/', created: true } },
+        agentFinal: 'Done! Created the `notes/` directory in your workspace.\n\nYour workspace is now:\n• greeting.txt\n• notes/'
+      },
+      write: {
+        human: '"Write hello.txt with content \'Hello wind!\'"',
+        agent: 'Writing to hello.txt with the overwrite flag to ensure success.',
+        toolCall: 'echo "Hello wind!" | windcli put hello.txt --stdin --overwrite',
+        result: { ok: true, data: { path: 'hello.txt', bytes: 11, written_at: '2026-05-16T00:36:00Z' } },
+        agentFinal: 'Created hello.txt with content "Hello wind!" (11 bytes). ✓'
+      },
+      wft: {
+        human: '"Open greeting.txt in WFT Terminal"',
+        agent: 'Dispatching greeting.txt to WFT via windlocal protocol.',
+        toolCall: 'windcli wft file greeting.txt',
+        result: { ok: true, data: { uri: 'windlocal://page?kind=file&target=greeting.txt', action: 'open_in_wft', description: 'Open greeting.txt in WFT Financial Terminal' } },
+        agentFinal: 'Opened greeting.txt in WFT Terminal via windlocal:// protocol.\n\nThe windlocal handler receives the URI and opens the file in the WFT application.'
+      }
+    };
+
+    // ─── JSON highlighter ─────────────────────────────────────
+    function highlightJSON(obj) {
+      const s = JSON.stringify(obj, null, 2);
+      return s
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"([^"]+)":/g, '<span class="j-key">"$1"</span>:')
+        .replace(/: "([^"]+)"/g, ': <span class="j-string">"$1"</span>')
+        .replace(/: (true|false)/g, ': <span class="j-bool">$1</span>')
+        .replace(/: (\d+)/g, ': <span class="j-number">$1</span>')
+        .replace(/: (null)/g, ': <span class="j-null">$1</span>');
+    }
+
+    function escape(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function detectScenario(text) {
+      const t = text.toLowerCase();
+      if (t.includes('list') || t.includes('文件') || t.includes('ls')) return 'ls';
+      if (t.includes('创建') || t.includes('mkdir') || t.includes('目录')) return 'mkdir';
+      if (t.includes('write') || t.includes('写') || t.includes('创建文件')) return 'write';
+      if (t.includes('open') || t.includes('wft') || t.includes('打开')) return 'wft';
+      return 'ls';
+    }
+
+    // ─── Send message ─────────────────────────────────────────
+    function sendMsg() {
+      const input = document.getElementById('convInput');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      autoResize(input);
+
+      const msgs = document.getElementById('convMessages');
+
+      // Human message
+      msgs.innerHTML += `
+        <div class="conv-msg human">
+          <div class="conv-avatar">👤</div>
+          <div class="conv-body">
+            <div class="conv-meta">You</div>
+            <div class="conv-text">${escape(text)}</div>
+          </div>
+        </div>`;
+
+      const key = detectScenario(text);
+      const s = scenarios[key];
+
+      // Agent "thinking" message
+      const agentId = 'agent-' + Date.now();
+      msgs.innerHTML += `
+        <div class="conv-msg agent" id="${agentId}">
+          <div class="conv-avatar">🤖</div>
+          <div class="conv-body">
+            <div class="conv-meta">AI Agent</div>
+            <div class="conv-text">${escape(s.agent)}\n\n<span style="color:#484f58; font-size:11px">⏳ Calling tool...</span></div>
+          </div>
+        </div>`;
+
+      // Update trace
+      document.getElementById('traceContent').innerHTML = `
+        <div class="step human-step">
+          <div class="step-label">Human → AI Agent</div>
+          <div class="step-content">${escape(text)}</div>
+        </div>
+        <div class="step agent-step">
+          <div class="step-label">AI Agent (thinking)</div>
+          <div class="step-content">${escape(s.agent)}</div>
+        </div>
+        <div class="step cmd-step">
+          <div class="step-label">AI Agent → wind CLI (tool call)</div>
+          <div class="step-content cmd">$ ${escape(s.toolCall)}</div>
+        </div>
+        <div class="step result-step">
+          <div class="step-label">wind CLI → AI Agent (result)</div>
+          <div class="step-content ok">✓ exit code 0 — success</div>
+          <pre style="margin-top:6px">${highlightJSON(s.result)}</pre>
+        </div>`;
+
+      msgs.scrollTop = msgs.scrollHeight;
+
+      // After 800ms, show final agent response
+      setTimeout(() => {
+        const el = document.getElementById(agentId);
+        if (el) {
+          el.querySelector('.conv-text').innerHTML = escape(s.agentFinal);
+        }
+        // Add tool result to trace
+        document.getElementById('traceContent').innerHTML += `
+          <div class="step agent-step" style="margin-top:8px">
+            <div class="step-label">AI Agent → Human (response)</div>
+            <div class="step-content">${escape(s.agentFinal)}</div>
+          </div>`;
+        msgs.scrollTop = msgs.scrollHeight;
+      }, 900);
+    }
+  </script>
+</body>
+</html>
