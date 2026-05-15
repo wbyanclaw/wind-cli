@@ -95,6 +95,10 @@ try {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     Write-Ok $InstallDir
 
+    Write-Step "Cleaning temp cache"
+    Remove-Item "$env:TEMP\windcli*" -Force -ErrorAction SilentlyContinue
+    Write-Ok "Cache cleaned"
+
     Write-Step "Downloading $ExeName"
     Invoke-WebRequest -Uri $exeUrl -OutFile $tempExe -UserAgent $UserAgent
     if (-not (Test-Path $tempExe)) {
