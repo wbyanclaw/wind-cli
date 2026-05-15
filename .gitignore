@@ -3,3 +3,4 @@
 *.swo
 .DS_Store
 wind.config.json
+SHA256SUMS.txt

@@ -30,7 +30,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             cmd_extract(path, format.as_deref(), *include_base64, *tabular)
         }
         Command::Wft { action } => cmd_wft(action),
-        Command::Wiki { action } => cmd_wiki(action),
+        Command::Wiki { action } => cmd_wiki(action, json_mode),
     };
 
     match result {
@@ -527,7 +527,7 @@ fn cmd_wft(action: &WftAction) -> anyhow::Result<serde_json::Value> {
     }))
 }
 
-fn cmd_wiki(action: &WikiAction) -> anyhow::Result<serde_json::Value> {
+fn cmd_wiki(action: &WikiAction, _json_mode: bool) -> anyhow::Result<serde_json::Value> {
     use crate::cli::WikiAction;
     use tokio::runtime::Runtime;
 
@@ -560,7 +560,7 @@ fn cmd_wiki(action: &WikiAction) -> anyhow::Result<serde_json::Value> {
         }
         WikiAction::Status => {
             let config = wind_wiki::Config::load().unwrap_or_default();
-            let wiki = rt.block_on(wind_wiki::Wiki::new(config))?;
+            let wiki = wind_wiki::Wiki::new_local(config)?;
             let status = wiki.status()?;
             Ok(serde_json::to_value(status)?)
         }
