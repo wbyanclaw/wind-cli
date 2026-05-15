@@ -1,86 +1,114 @@
-# wind-demo — Product Requirements Document v0.3
+# wind-demo — Product Requirements Document v0.4
+Owner: @ruler | Date: 2026-05-16 | Status: Ready for review
 
 ## 1. 背景
 
-wind-demo 是面向金融客户的**产品级演示工具**：展示"自然语言 + AI Agent + wind-cli + 本地 LLM Wiki 知识库"的人机协作体验。
+wind-demo 是面向金融客户的**产品级演示工具**：展示"自然语言 + AI Agent + wind-cli（统一入口）+ LLM Wiki SDK"的人机协作体验。
 
-## 2. 交互架构
+**架构关系**：
+```
+wind-cli（统一入口，单一 Rust 二进制）
+  ├── 文件管理工具（ls/read/write/mkdir/rm/extract/wft/workspace_info/version）
+  └── LLM Wiki SDK（wind-wiki crate，crates.io）→ 三 Pipeline
+       ├── Ingest：源文件 → AI 编撰 → wiki Markdown
+       ├── Query：用户问题 → AI 读 wiki → 融会贯通回答
+       └── Lint：定时审计 → 修复死链/矛盾
+```
+
+---
+
+## 2. UI 布局
 
 ```
-用户 ←→ AI Agent（单次请求，双路检索）
-            ├── wind-cli（9个工具 + WikiQuery）
-            │     ├── 文件操作（ls/read/write/mkdir/rm/extract）
-            │     ├── WFT 集成（wft file/search/app/settings）
-            │     └── 工作区查询（workspace_info）
-            └── 本地 LLM Wiki（新增 WikiQuery 工具）
-```
-
-wind-cli 新增第10个工具：`wind wiki query <text>` — 查询本地 Markdown 知识库
-
-## 3. UI 布局
-
-```
-┌─ Header: wind-demo + API状态 + 版本 ─────────────────┐
-├─ 左侧栏 ───────┬─ 中央对话 ───────┬─ 右侧栏 ────────┤
-│ 📂 工作区文件树   │  对话气泡        │ ⚡ 协议链路      │
-│ （实时更新）     │ NL输入+AI回复    │ 📋 执行链路      │
+┌─ Header: wind-demo + 导航 + API状态 + 版本 ─────────────────┐
+├─ 左侧栏 ───────┬─ 中央对话 ───────┬─ 右侧栏 ──────────┤
+│ 📂 工作区文件树  │  对话气泡        │ ⚡ 协议链路      │
+│ （实时更新）      │ NL输入+AI回复    │ 📋 执行链路      │
 │               │               │ 📦 安装入口     │
-│ 🧠 LLM Wiki   │ 场景按钮        │               │
-│ 知识库面板      │               │               │
+│ 🧠 LLM Wiki   │ 快捷场景按钮      │               │
+│ 三大目录文件树   │               │               │
+│ （展示Wiki结构） │               │               │
 └───────────────┴───────────────┴───────────────┘
 ```
 
-## 4. UI 风格
-- 金融科技风：浅底蓝绿配色，适合客户演示
-- 全中文界面
-- 非暗黑
+**UI 风格**：金融科技风（蓝白配色，非暗黑），全中文。
 
-## 5. 核心模块
+---
 
-### 5.1 工作区文件树
-- 实时显示 workspace 目录结构
+## 3. 核心模块
+
+### 3.1 工作区文件树
+- 实时显示 wind-cli workspace 目录结构
 - AI 执行命令后树自动更新
 - 目录/文件图标区分
 
-### 5.2 本地 LLM Wiki 知识库
-- 来源：`~/.local/share/wind/wiki/*.md`（Markdown 文件）
-- 启动时预加载到内存（或按需加载）
-- `wind wiki query <text>` 模糊匹配标题/内容，返回相关片段
-- 作为 wind-cli 第10个工具接入 AI Agent
+### 3.2 LLM Wiki 三大目录
+- `/raw`（只读原始资料）、`/wiki`（AI 编撰知识）、`SYSTEM.md`（行为准则）
+- 文件树展示 Wiki 目录结构
+- 展示 Ingest/Query/Lint Pipeline 状态
 
-### 5.3 对话界面
-- 全中文自然语言输入
+### 3.3 对话界面
+- 全中文 NL 输入
 - AI 回复气泡（thought + tool call + result）
-- 预设演示场景按钮
+- 快捷场景按钮（ls/mkdir/write/wft）
+- wind wiki 子命令结果展示
 
-### 5.4 执行链路
-- Human → AI → wind CLI / Wiki → 结果
+### 3.4 执行链路（右侧）
+- Human → AI → wind CLI/wiki → 结果
 - JSON 高亮格式化
 
-### 5.5 协议链路图
-- 静态四层：Human ↔ AI Agent ↔ wind CLI ↔ Workspace / windlocal:// → WFT
+### 3.5 协议链路图（静态）
+- Human ↔ AI Agent ↔ wind CLI ↔ Workspace / windlocal:// → WFT
 
-### 5.6 安装入口
+### 3.6 安装入口
 
-## 6. wind-cli 新增功能
-- `wind wiki query <text>` — 第10个工具，查询本地知识库
-- 知识库目录：`~/.local/share/wind/wiki/`（可配置）
+---
 
-## 7. 验收标准
-1. 文件树实时更新（mkdir 后显示新目录）
-2. LLM Wiki 双路检索（"结合报告说工作区文件" → 同时返回两者）
-3. `wind wiki query` 执行成功
-4. 全中文 Fintech 风格 UI
+## 4. wind-cli 新增命令
 
-## 8. 开放问题
-- Wiki 目录路径是否可配置？
-- 索引格式：纯 Markdown 还是 front-matter？
-- Wiki 调用走 `tools call wiki_query`？
+### 4.1 wind wiki query
+- `wind wiki query <text>` — 查询本地知识库
+- 返回相关 Markdown 内容
 
-## 9. 范围外
+### 4.2 wind wiki ingest（LLM Wiki SDK Pipeline）
+- `wind wiki ingest <file>` — 源文件 → AI 编撰 → wiki/
+- 依赖 wind-wiki crate
+
+### 4.3 wind wiki lint
+- `wind wiki lint` — 审计 wiki/ 修复死链/矛盾
+
+### 4.4 wind wiki status
+- `wind wiki status` — 显示 wiki 统计
+
+---
+
+## 5. LLM Wiki SDK（wind-wiki crate）
+
+- **语言**：Rust 2021
+- **位置**：独立 crates.io 包（wind-cli dependency）
+- **三目录**：`/raw`（源资料）、`/wiki`（知识）、`SYSTEM.md`（准则）
+- **三 Pipeline**：Ingest / Query / Lint
+- **AI 配置**：独立（可不同于 wind-demo 的对话 AI）
+
+---
+
+## 6. 验收标准
+
+| # | 检查项 | 标准 |
+|---|--------|------|
+| 1 | 工作区文件树实时更新 | mkdir 后显示新目录 |
+| 2 | LLM Wiki 目录树展示 | raw/wiki/SYSTEM.md 三目录可见 |
+| 3 | wind wiki query 执行成功 | 返回相关 Markdown 内容 |
+| 4 | wind wiki ingest Pipeline 可视 | 展示编撰过程 |
+| 5 | 全中文 Fintech 风格 UI | 金融科技风非暗黑 |
+| 6 | API 配置后正常对话 | 可配置 Claude/GPT key |
+
+---
+
+## 7. 范围外
 - 语音输入
 - 向量数据库（纯 Markdown 检索）
 - 流式输出
 
-## 10. Mockup
-- Fintech 风格 Mockup v2: https://gist.github.com/wbyanclaw/5f144b6082719997980c9d6b9c93b066
+## 8. Mockup
+- Fintech 风格 v4：https://gist.github.com/wbyanclaw/8c29cd7ec0dac07189ea6233cf735427
