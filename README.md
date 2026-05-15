@@ -1,6 +1,6 @@
-# windcli
+# wind
 
-`windcli` is a controlled workspace file CLI for AI agents and local automation. All file operations are scoped to one initialized workspace directory.
+`wind` is a controlled workspace file CLI for AI agents and local automation. All file operations are scoped to one initialized workspace directory.
 
 ## Windows Install
 
@@ -21,7 +21,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\install.ps1"
 After installation, open a new terminal and verify:
 
 ```powershell
-windcli --version
+wind --version
 ```
 
 Latest release: <https://github.com/wbyanclaw/wind-cli/releases/latest>
@@ -30,56 +30,50 @@ Latest release: <https://github.com/wbyanclaw/wind-cli/releases/latest>
 
 ```bash
 # Initialize workspace once
-windcli init ~/my-workspace
+wind init ~/my-workspace
 
 # Write a file
-echo "hello world" | windcli write notes/hello.txt --stdin
+echo "hello world" | wind write notes/hello.txt --stdin
 
 # Read a file
-windcli read notes/hello.txt
+wind read notes/hello.txt
 
 # List files
-windcli ls notes
+wind ls notes
 
 # Delete a file
-windcli rm notes/hello.txt --yes
+wind rm notes/hello.txt --yes
 ```
 
 ## Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `init <path>` | Create the active workspace | `windcli init ~/workspace` |
-| `ls [path]` | List files in workspace | `windcli ls notes` |
-| `read <file>` | Read file content, capped at 10MB | `windcli read notes/todo.txt` |
-| `write <file> --stdin` | Write file from stdin | `echo 'hello' \| windcli write notes/a.txt --stdin` |
-| `write <file> --content "text"` | Write file from an argument | `windcli write notes/a.txt --content "hello"` |
-| `mkdir <path>` | Create a directory | `windcli mkdir notes` |
-| `rm <path> --yes` | Delete a file | `windcli rm notes/old.txt --yes` |
-| `rm <path> --force` | Delete recursively without prompts | `windcli rm docs --force` |
-| `open --file <path>` | Validate and open a workspace file | `windcli open --file docs/readme.md` |
-| `open --search <query>` | Search workspace content | `windcli open --search "TODO"` |
-| `tools list` | List Agent Protocol tools | `windcli tools list` |
-| `tools describe <name>` | Describe one Agent Protocol tool | `windcli tools describe read` |
-| `tools call <name> --params <json>` | Call one Agent Protocol tool | `windcli tools call read --params '{"path":"notes/a.txt"}'` |
-| `version` | Show version as JSON-like output | `windcli version` |
-| `upgrade` | Show the update-check command; automatic upgrade is not supported yet | `windcli upgrade` |
-| `upgrade --check` | Check GitHub releases for updates; requires access to `https://api.github.com` and does not install automatically | `windcli upgrade --check` |
+| `init <path>` | Create the active workspace | `wind init ~/workspace` |
+| `ls [path]` | List files in workspace | `wind ls notes` |
+| `read <file>` | Read file content, capped at 10MB | `wind read notes/todo.txt` |
+| `write <file> --stdin` | Write file from stdin | `echo 'hello' \| wind write notes/a.txt --stdin` |
+| `write <file> --content "text"` | Write file from an argument | `wind write notes/a.txt --content "hello"` |
+| `write <file> --overwrite` | Allow overwriting existing files | `wind write notes/a.txt --overwrite` |
+| `mkdir <path>` | Create a directory | `wind mkdir notes` |
+| `rm <path> --yes` | Delete a file | `wind rm notes/old.txt --yes` |
+| `rm <path> --force` | Delete recursively without prompts | `wind rm docs --force` |
+| `wft file <path>` | Open workspace file (WFT) | `wind wft file docs/readme.md` |
+| `wft search <query>` | Search workspace content | `wind wft search "TODO"` |
+| `wft app` | Open app view | `wind wft app` |
+| `wft settings` | Open settings | `wind wft settings` |
+| `wft workspace` | Show workspace info | `wind wft workspace` |
+| `tools list` | List Agent Protocol tools | `wind tools list` |
+| `tools describe <name>` | Describe one Agent Protocol tool | `wind tools describe read` |
+| `tools call <name> --params <json>` | Call one Agent Protocol tool | `wind tools call read --params '{"path":"notes/a.txt"}'` |
+| `version` | Show version | `wind version` |
+| `upgrade --check` | Check GitHub releases for updates | `wind upgrade --check` |
 
 All commands support `--json` for machine-readable output.
 
 ```bash
-windcli --json ls notes
+wind --json ls notes
 ```
-
-If `windcli upgrade --check` cannot reach GitHub, check network access with:
-
-```powershell
-curl https://github.com
-curl https://api.github.com
-```
-
-Corporate proxy, firewall, VPN, system time, Windows root certificates, and WinHTTP or `HTTPS_PROXY` settings can affect this check. You can always download manually from <https://github.com/wbyanclaw/wind-cli/releases/latest>.
 
 ## Security Rules
 
@@ -88,6 +82,7 @@ Corporate proxy, firewall, VPN, system time, Windows root certificates, and WinH
 - Symlink and reparse-point following is blocked
 - File reads are capped at 10MB
 - Glob and wildcard patterns are blocked in delete operations
+- Write operations require `--overwrite` flag to overwrite existing files
 - High-risk tool calls require explicit `--force`
 
 ## Environment Variables
