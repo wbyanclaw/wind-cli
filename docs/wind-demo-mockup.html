@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +9,8 @@
       --bg: #0a0a0f;
       --surface: #111118;
       --surface2: #18181f;
+      --surface3: #1e1e28;
       --border: #2a2a35;
-      --border-light: #3a3a48;
       --accent: #635bff;
       --accent-hover: #7a74ff;
       --accent-dim: rgba(99,91,255,0.12);
@@ -28,7 +28,7 @@
     html, body { height: 100%; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
@@ -55,7 +55,6 @@
       font-weight: 700;
       color: var(--text);
     }
-    .topbar-logo svg { width: 22px; height: 22px; }
     .topbar-badge {
       font-size: 11px;
       font-weight: 500;
@@ -83,61 +82,72 @@
       0%,100% { opacity: 1; }
       50% { opacity: 0.4; }
     }
-    .topbar-version {
-      font-size: 12px;
-      color: var(--text-muted);
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
+    @keyframes bounce {
+      0%,80%,100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
     }
 
-    /* ── Layout ── */
+    /* ── Layout: sidebar left + main + sidebar right ── */
     .layout { flex: 1; display: flex; min-height: 0; }
 
-    /* ── Sidebar ── */
-    .sidebar {
+    /* ── Left sidebar: file tree ── */
+    .left-sidebar {
       width: 220px;
       background: var(--surface);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      padding: 12px;
-      gap: 4px;
       flex-shrink: 0;
     }
-    .sidebar-section-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
+    .left-sidebar-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
       color: var(--text-dim);
-      padding: 8px 6px 4px;
-    }
-    .sidebar-item {
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
+      gap: 6px;
+    }
+    .left-sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 14px;
       font-size: 13px;
       color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all 0.12s;
+      border-left: 2px solid transparent;
     }
-    .sidebar-item:hover { background: var(--surface2); color: var(--text); }
-    .sidebar-item.active { background: var(--accent-dim); color: var(--accent); }
-    .sidebar-item .icon { font-size: 15px; }
+    .tree-item:hover { background: var(--surface2); color: var(--text); }
+    .tree-item.active { background: var(--accent-dim); color: var(--accent); border-left-color: var(--accent); }
+    .tree-item.folder { color: var(--yellow); }
+    .tree-item.folder:hover { color: var(--yellow); }
+    .tree-icon { font-size: 13px; flex-shrink: 0; }
+    .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-meta { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+
+    .tree-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-dim);
+      padding: 10px 14px 4px;
+    }
 
     /* ── Main content ── */
     .content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
     /* ── Chat ── */
-    .chat {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
+    .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -162,13 +172,11 @@
     .msg.user .msg-avatar { background: var(--accent); }
     .msg.agent .msg-avatar { background: #1a1a25; border: 1px solid var(--border); }
 
-    .msg-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-
     .msg-text {
       padding: 12px 16px;
       border-radius: 14px;
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.65;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -184,130 +192,51 @@
       color: var(--text);
     }
 
-    /* Tool call card inside agent message */
-    .tool-call {
-      margin-top: 6px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-    }
+    /* Tool call card */
+    .tool-call { margin-top: 8px; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
     .tool-call-header {
       background: #0d0d14;
       padding: 7px 12px;
       font-size: 11px;
       color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      display: flex; align-items: center; gap: 6px;
       border-bottom: 1px solid var(--border);
     }
     .tool-call-header .icon { color: var(--blue); }
-    .tool-call-body {
-      padding: 10px 12px;
-      background: var(--surface);
-    }
-    .tool-cmd {
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      font-size: 13px;
-      color: var(--blue);
-      margin-bottom: 8px;
-    }
-    .tool-result {
-      font-size: 12px;
-      line-height: 1.6;
-    }
-    .tool-ok { color: var(--green); }
-    .tool-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: var(--green-dim);
-      color: var(--green);
-      border: 1px solid rgba(0,200,83,0.2);
-      margin-bottom: 6px;
-    }
+    .tool-call-body { padding: 10px 12px; background: var(--surface); }
+    .tool-cmd { font-family: 'SF Mono', monospace; font-size: 13px; color: var(--blue); margin-bottom: 8px; }
+    .tool-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,200,83,0.2); margin-bottom: 6px; }
+    .tool-ok { color: var(--green); font-size: 12px; margin-bottom: 4px; }
+    .tool-json { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
 
-    /* Thinking indicator */
-    .thinking {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-dim);
-      padding: 4px 0;
-    }
-    .thinking-dots span {
-      width: 4px; height: 4px;
-      border-radius: 50%;
-      background: var(--text-dim);
-      animation: bounce 1.2s infinite;
-    }
+    /* Thinking */
+    .thinking { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); padding: 4px 0; }
+    .thinking-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--text-dim); animation: bounce 1.2s infinite; display: inline-block; }
     .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
     .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%,80%,100% { transform: translateY(0); }
-      40% { transform: translateY(-4px); }
-    }
 
-    /* ── Input area ── */
-    .input-area {
-      padding: 12px 20px 16px;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .input-box {
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 10px 14px;
-      transition: border-color 0.2s;
-    }
+    /* Welcome */
+    .welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 40px 24px; }
+    .welcome-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--accent-dim); border: 1px solid rgba(99,91,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .welcome h2 { font-size: 20px; font-weight: 700; color: var(--text); }
+    .welcome p { font-size: 14px; color: var(--text-muted); line-height: 1.6; max-width: 380px; }
+    .examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 480px; }
+    .example-chip { padding: 7px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); font-size: 13px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .example-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Input ── */
+    .input-area { padding: 12px 20px 16px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .input-box { display: flex; align-items: flex-end; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; transition: border-color 0.2s; }
     .input-box:focus-within { border-color: var(--accent); }
-    .input-field {
-      flex: 1;
-      background: none;
-      border: none;
-      outline: none;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-      resize: none;
-      min-height: 22px;
-      max-height: 120px;
-      line-height: 1.5;
-    }
+    .input-field { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14px; font-family: inherit; resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; }
     .input-field::placeholder { color: var(--text-dim); }
-    .input-send {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
-      flex-shrink: 0;
-    }
+    .input-send { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0; }
     .input-send:hover { background: var(--accent-hover); }
-    .input-send:disabled { opacity: 0.4; cursor: not-allowed; }
-    .input-hint {
-      font-size: 11px;
-      color: var(--text-dim);
-      margin-top: 6px;
-      padding: 0 4px;
-    }
+    .input-hint { font-size: 11px; color: var(--text-dim); margin-top: 6px; padding: 0 4px; }
 
-    /* ── Right panel ── */
-    .right-panel {
-      width: 300px;
+    /* ── Right sidebar ── */
+    .right-sidebar {
+      width: 280px;
       background: var(--surface);
       border-left: 1px solid var(--border);
       display: flex;
@@ -315,124 +244,52 @@
       overflow-y: auto;
       flex-shrink: 0;
     }
+    .rs-section { border-bottom: 1px solid var(--border); padding: 14px 16px; }
+    .rs-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin-bottom: 10px; font-weight: 600; }
 
-    .rp-section {
-      border-bottom: 1px solid var(--border);
-      padding: 14px 16px;
+    /* Wiki */
+    .wiki-list { display: flex; flex-direction: column; gap: 6px; }
+    .wiki-item {
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
-    .rp-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--text-dim);
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
+    .wiki-item:hover { border-color: var(--purple); color: var(--purple); background: rgba(163,113,247,0.06); }
+    .wiki-item .icon { font-size: 14px; }
+    .wiki-item .name { flex: 1; }
+    .wiki-item .badge { font-size: 10px; padding: 1px 6px; border-radius: 5px; background: rgba(163,113,247,0.15); color: var(--purple); }
 
     /* API Config */
-    .api-card { display: flex; flex-direction: column; gap: 7px; }
-    .api-row { display: flex; gap: 6px; font-size: 12px; }
+    .api-row { display: flex; gap: 6px; font-size: 12px; margin-bottom: 6px; }
     .api-key-label { color: var(--text-dim); width: 50px; flex-shrink: 0; }
     .api-val { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .api-val.model { color: var(--accent); font-weight: 500; }
     .api-connected { color: var(--green); font-size: 11px; }
 
-    /* Protocol diagram */
-    .protocol-flow { display: flex; flex-direction: column; gap: 6px; }
-    .pf-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-    .pf-node {
-      padding: 4px 9px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-    }
+    /* Protocol */
+    .pf-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 5px; }
+    .pf-node { padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; background: var(--surface2); border: 1px solid var(--border); }
     .pf-node.blue { border-color: rgba(88,166,255,0.3); color: var(--blue); background: rgba(88,166,255,0.06); }
     .pf-node.green { border-color: rgba(0,200,83,0.3); color: var(--green); background: rgba(0,200,83,0.06); }
     .pf-node.purple { border-color: rgba(163,113,247,0.3); color: var(--purple); background: rgba(163,113,247,0.06); }
     .pf-node.yellow { border-color: rgba(242,204,96,0.3); color: var(--yellow); background: rgba(242,204,96,0.06); }
     .pf-node.muted { color: var(--text-dim); }
-    .pf-arrow { color: var(--text-dim); font-size: 13px; }
-    .pf-sub { padding-left: 22px; }
-
-    /* Tool list */
-    .tool-grid { display: flex; flex-wrap: wrap; gap: 5px; }
-    .tool-tag {
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
+    .pf-arrow { color: var(--text-dim); font-size: 12px; }
+    .pf-sub { padding-left: 20px; }
 
     /* Install */
     .install-row { display: flex; gap: 8px; align-items: center; }
-    .install-cmd {
-      flex: 1;
-      font-size: 11px;
-      color: var(--text-muted);
-      font-family: 'SF Mono', monospace;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .copy-btn {
-      padding: 4px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: none;
-      color: var(--text-dim);
-      font-size: 11px;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-    }
+    .install-cmd { flex: 1; font-size: 11px; color: var(--text-muted); font-family: 'SF Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text-dim); font-size: 11px; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Welcome */
-    .welcome {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      text-align: center;
-      padding: 40px 24px;
-    }
-    .welcome-icon {
-      width: 52px; height: 52px;
-      border-radius: 14px;
-      background: var(--accent-dim);
-      border: 1px solid rgba(99,91,255,0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px;
-    }
-    .welcome h2 { font-size: 20px; font-weight: 700; color: var(--text); }
-    .welcome p { font-size: 14px; color: var(--text-muted); line-height: 1.6; max-width: 340px; }
-
-    /* Examples */
-    .examples {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-      max-width: 440px;
-    }
-    .example-chip {
-      padding: 7px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      font-size: 13px;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .example-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
   </style>
 </head>
 <body>
@@ -440,7 +297,7 @@
   <!-- Topbar -->
   <div class="topbar">
     <div class="topbar-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
         <path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>
@@ -451,35 +308,48 @@
     <div class="topbar-spacer"></div>
     <div class="topbar-status">
       <div class="dot"></div>
-      Claude API Connected
+      Claude API 已连接
     </div>
-    <div class="topbar-version">v0.2.1</div>
+    <div class="topbar-badge">v0.2.1</div>
   </div>
 
   <!-- Layout -->
   <div class="layout">
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-section-label">Scenarios</div>
-      <div class="sidebar-item active" onclick="runExample('ls')">
-        <span class="icon">📂</span> List files
+    <!-- Left sidebar: workspace file tree -->
+    <div class="left-sidebar">
+      <div class="left-sidebar-header">
+        <span>📁</span> 工作区文件树
       </div>
-      <div class="sidebar-item" onclick="runExample('mkdir')">
-        <span class="icon">📁</span> Create directory
-      </div>
-      <div class="sidebar-item" onclick="runExample('write')">
-        <span class="icon">✏️</span> Write file
-      </div>
-      <div class="sidebar-item" onclick="runExample('wft')">
-        <span class="icon">🔗</span> WFT dispatch
-      </div>
-      <div class="sidebar-section-label" style="margin-top:8px">Info</div>
-      <div class="sidebar-item">
-        <span class="icon">🛠️</span> 9 tools
-      </div>
-      <div class="sidebar-item">
-        <span class="icon">🔒</span> Workspace isolated
+      <div class="left-sidebar-body">
+        <div class="tree-section-label">目录</div>
+        <div class="tree-item folder active" onclick="this.classList.toggle('active')">
+          <span class="tree-icon">📂</span>
+          <span class="tree-name">workspace/</span>
+        </div>
+        <div class="tree-item" style="padding-left:28px" onclick="highlightTree(this)">
+          <span class="tree-icon">📄</span>
+          <span class="tree-name">greeting.txt</span>
+          <span class="tree-meta">11B</span>
+        </div>
+        <div class="tree-item folder" style="padding-left:28px" onclick="this.classList.toggle('active')">
+          <span class="tree-icon">📂</span>
+          <span class="tree-name">notes/</span>
+        </div>
+        <div class="tree-item folder" style="padding-left:28px" onclick="this.classList.toggle('active')">
+          <span class="tree-icon">📂</span>
+          <span class="tree-name">docs/</span>
+        </div>
+
+        <div class="tree-section-label">工具链</div>
+        <div class="tree-item" onclick="highlightTree(this)">
+          <span class="tree-icon">🔧</span>
+          <span class="tree-name">wind-cli</span>
+        </div>
+        <div class="tree-item" onclick="highlightTree(this)">
+          <span class="tree-icon">🌐</span>
+          <span class="tree-name">WFT Terminal</span>
+        </div>
       </div>
     </div>
 
@@ -487,16 +357,15 @@
     <div class="content">
       <div class="chat">
         <div class="chat-messages" id="chatMessages">
-          <!-- Welcome -->
           <div class="welcome" id="welcomeScreen">
             <div class="welcome-icon">🌬️</div>
             <h2>wind-demo</h2>
-            <p>Your AI Agent powered by wind-cli. Describe what you want to do in natural language — I'll execute wind commands on your behalf.</p>
+            <p>你的 AI Agent，由 wind-cli 驱动。用自然语言描述你想要的操作，我会帮你执行。</p>
             <div class="examples">
-              <div class="example-chip" onclick="runExample('ls')">List files in workspace</div>
-              <div class="example-chip" onclick="runExample('mkdir')">Create a notes folder</div>
-              <div class="example-chip" onclick="runExample('write')">Write hello.txt</div>
-              <div class="example-chip" onclick="runExample('wft')">Open file in WFT</div>
+              <div class="example-chip" onclick="runScenario('ls')">📂 列出工作区文件</div>
+              <div class="example-chip" onclick="runScenario('mkdir')">📁 创建 notes 目录</div>
+              <div class="example-chip" onclick="runScenario('write')">✏️ 写入 hello.txt</div>
+              <div class="example-chip" onclick="runScenario('wft')">🔗 WFT 打开文件</div>
             </div>
           </div>
         </div>
@@ -504,115 +373,133 @@
         <!-- Input -->
         <div class="input-area">
           <div class="input-box">
-            <textarea class="input-field" id="convInput" rows="1" placeholder="Describe what you want to do..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <textarea class="input-field" id="convInput" rows="1" placeholder="描述你想做什么..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
             <button class="input-send" id="sendBtn" onclick="sendMsg()">↑</button>
           </div>
-          <div class="input-hint">AI Agent calls wind-cli tools to fulfill your request · All operations confined to workspace</div>
+          <div class="input-hint">AI Agent 调用 wind-cli 工具执行操作 · 所有操作限制在工作区内</div>
         </div>
       </div>
     </div>
 
-    <!-- Right Panel -->
-    <div class="right-panel">
-      <div class="rp-section">
-        <div class="rp-title">API Configuration</div>
-        <div class="api-card">
-          <div class="api-row">
-            <div class="api-key-label">Provider</div>
-            <div class="api-val">Anthropic</div>
+    <!-- Right sidebar -->
+    <div class="right-sidebar">
+
+      <!-- LLM Wiki Knowledge Base -->
+      <div class="rs-section">
+        <div class="rs-title">📚 LLM Wiki 知识库</div>
+        <div class="wiki-list">
+          <div class="wiki-item" onclick="this.style.borderColor='#a371f7'; this.style.color='#a371f7'">
+            <span class="icon">📖</span>
+            <span class="name">wind-cli 使用指南</span>
+            <span class="badge">文档</span>
           </div>
-          <div class="api-row">
-            <div class="api-key-label">Model</div>
-            <div class="api-val model">claude-sonnet-4-20250514</div>
+          <div class="wiki-item">
+            <span class="icon">🔧</span>
+            <span class="name">Agent Protocol 规范</span>
+            <span class="badge">API</span>
           </div>
-          <div class="api-row">
-            <div class="api-key-label">Tools</div>
-            <div class="api-val">windcli (9 functions)</div>
+          <div class="wiki-item">
+            <span class="icon">🌐</span>
+            <span class="name">WFT 集成说明</span>
+            <span class="badge">集成</span>
           </div>
-          <div class="api-row">
-            <div class="api-key-label">Status</div>
-            <div class="api-connected">● Connected</div>
+          <div class="wiki-item">
+            <span class="icon">🛡️</span>
+            <span class="name">安全模型文档</span>
+            <span class="badge">安全</span>
+          </div>
+          <div class="wiki-item">
+            <span class="icon">💡</span>
+            <span class="name">常见问题 FAQ</span>
+            <span class="badge">FAQ</span>
           </div>
         </div>
       </div>
 
-      <div class="rp-section">
-        <div class="rp-title">Protocol Flow</div>
-        <div class="protocol-flow">
+      <!-- Protocol Flow -->
+      <div class="rs-section">
+        <div class="rs-title">🔄 协议链路</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
           <div class="pf-row">
-            <div class="pf-node blue">You (NL)</div>
+            <div class="pf-node blue">你 (自然语言)</div>
             <span class="pf-arrow">↔</span>
             <div class="pf-node green">AI Agent</div>
           </div>
-          <div class="pf-row">
-            <span class="pf-arrow" style="padding-left:22px">↓</span>
+          <div class="pf-row pf-sub">
+            <span class="pf-arrow" style="color:var(--text-dim)">↓</span>
             <div class="pf-node muted">wind CLI</div>
           </div>
           <div class="pf-row pf-sub">
-            <div class="pf-node">Workspace</div>
-            <span class="pf-arrow">or</span>
+            <span class="pf-arrow" style="padding-left:20px">→</span>
+            <div class="pf-node">工作区文件系统</div>
+          </div>
+          <div class="pf-row pf-sub">
+            <span class="pf-arrow" style="padding-left:20px">或</span>
             <div class="pf-node purple">windlocal://</div>
             <span class="pf-arrow">→</span>
-            <div class="pf-node yellow">WFT</div>
+            <div class="pf-node yellow">WFT 终端</div>
           </div>
         </div>
       </div>
 
-      <div class="rp-section">
-        <div class="rp-title">Available Tools</div>
-        <div class="tool-grid">
-          <div class="tool-tag">ls</div>
-          <div class="tool-tag">read</div>
-          <div class="tool-tag">write</div>
-          <div class="tool-tag">mkdir</div>
-          <div class="tool-tag">rm</div>
-          <div class="tool-tag">extract</div>
-          <div class="tool-tag">wft</div>
-          <div class="tool-tag">workspace_info</div>
-          <div class="tool-tag">version_check</div>
+      <!-- API Config -->
+      <div class="rs-section">
+        <div class="rs-title">⚙️ API 配置</div>
+        <div class="api-row">
+          <div class="api-key-label">模型</div>
+          <div class="api-val model">claude-sonnet-4-20250514</div>
+        </div>
+        <div class="api-row">
+          <div class="api-key-label">工具</div>
+          <div class="api-val">windcli (9 个函数)</div>
+        </div>
+        <div class="api-row">
+          <div class="api-key-label">状态</div>
+          <div class="api-connected">● 已连接</div>
         </div>
       </div>
 
-      <div class="rp-section">
-        <div class="rp-title">Installation</div>
+      <!-- Install -->
+      <div class="rs-section">
+        <div class="rs-title">📦 安装 wind-cli</div>
         <div class="install-row">
           <div class="install-cmd">irm .../install.ps1 | iex</div>
-          <button class="copy-btn" onclick="copyCmd(this)">Copy</button>
+          <button class="copy-btn" onclick="copyCmd(this)">复制</button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // ── Data ───────────────────────────────────────────────────
+    // ── Scenarios ─────────────────────────────────────────────
     const scenarios = {
       ls: {
-        nl: 'List all files in the workspace',
-        reply: 'I\'ll list the files in your workspace using the `ls` tool.',
+        nl: '列出工作区中的所有文件',
+        reply: '好的，我来列出工作区中的文件。',
         cmd: 'windcli ls',
-        result: { ok: true, data: { path: '/tmp/wind-demo-001/', entries: [{ name: 'greeting.txt', kind: 'file', size: 11 }, { name: 'notes', kind: 'dir' }] } },
-        final: 'Here are the files in your workspace:\n\n• greeting.txt — file (11 bytes)\n• notes/ — directory\n\nAll operations are safely confined to your workspace.'
+        result: { ok: true, data: { path: '/tmp/wind-demo-001/', entries: [{ name: 'greeting.txt', kind: 'file', size: 11 }, { name: 'notes', kind: 'dir' }, { name: 'docs', kind: 'dir' }] } },
+        final: '工作区中的文件：\n\n• greeting.txt — 文件 (11 字节)\n• notes/ — 目录\n• docs/ — 目录\n\n所有操作都在工作区内安全隔离。'
       },
       mkdir: {
-        nl: 'Create a notes folder',
-        reply: 'Creating a new directory called "notes" for you.',
+        nl: '帮我创建一个 notes 目录',
+        reply: '好的，我来创建一个 notes 目录。',
         cmd: 'windcli mkdir notes',
         result: { ok: true, data: { path: 'notes/', created: true } },
-        final: 'Done! Created the `notes/` directory in your workspace. Your workspace now has:\n\n• greeting.txt\n• notes/'
+        final: '已创建 notes/ 目录！\n\n你的工作区现在包含：\n• greeting.txt\n• notes/'
       },
       write: {
-        nl: 'Write hello.txt with Hello wind!',
-        reply: 'Writing to hello.txt with the overwrite flag.',
+        nl: '写一个 hello.txt 文件，内容是 Hello wind!',
+        reply: '好的，使用 --overwrite 标志写入 hello.txt。',
         cmd: 'echo "Hello wind!" | windcli put hello.txt --stdin --overwrite',
-        result: { ok: true, data: { path: 'hello.txt', bytes: 11, written_at: '2026-05-16T00:36:00Z' } },
-        final: 'Created hello.txt with content "Hello wind!" (11 bytes). ✓'
+        result: { ok: true, data: { path: 'hello.txt', bytes: 11, written_at: '2026-05-16T00:49:00Z' } },
+        final: '已创建 hello.txt，内容为 "Hello wind!" (11 字节)。✓'
       },
       wft: {
-        nl: 'Open greeting.txt in WFT Terminal',
-        reply: 'Dispatching greeting.txt to WFT via windlocal protocol.',
+        nl: '在 WFT 终端中打开 greeting.txt',
+        reply: '通过 windlocal 协议将 greeting.txt 发送到 WFT 终端。',
         cmd: 'windcli wft file greeting.txt',
-        result: { ok: true, data: { uri: 'windlocal://page?kind=file&target=greeting.txt', action: 'open_in_wft', description: 'Open greeting.txt in WFT Financial Terminal' } },
-        final: 'Opened greeting.txt in WFT Terminal via windlocal:// protocol. The file is now displayed in the WFT application.'
+        result: { ok: true, data: { uri: 'windlocal://page?kind=file&target=greeting.txt', action: 'open_in_wft', description: '在 WFT 金融终端中打开 greeting.txt' } },
+        final: '已在 WFT 终端中打开 greeting.txt。\n\nwindlocal:// 协议处理器接收 URI 并在 WFT 应用中显示文件。'
       }
     };
 
@@ -623,10 +510,7 @@
     }
 
     function handleKey(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMsg();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
     }
 
     function highlightJSON(obj) {
@@ -643,10 +527,12 @@
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // ── Run example from sidebar / chip ──────────────────────
-    function runExample(key) {
-      document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-      document.querySelector(`.sidebar-item:nth-child(n+2)`).classList.remove('active');
+    function highlightTree(el) {
+      document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+    }
+
+    function runScenario(key) {
       const s = scenarios[key];
       document.getElementById('convInput').value = s.nl;
       autoResize(document.getElementById('convInput'));
@@ -657,34 +543,31 @@
     function sendMsg(forcedKey) {
       const input = document.getElementById('convInput');
       let text = input.value.trim();
-      if (!text && !forcedKey) return;
-
       const msgs = document.getElementById('chatMessages');
       document.getElementById('welcomeScreen')?.remove();
 
-      // Detect scenario
       let key = forcedKey || 'ls';
       if (!forcedKey) {
         const t = text.toLowerCase();
-        if (t.includes('list') || t.includes('文件')) key = 'ls';
-        else if (t.includes('创建') || t.includes('mkdir') || t.includes('folder') || t.includes('目录')) key = 'mkdir';
-        else if (t.includes('write') || t.includes('写') || t.includes('hello')) key = 'write';
-        else if (t.includes('open') || t.includes('wft') || t.includes('打开')) key = 'wft';
+        if (t.includes('列出') || t.includes('list') || t.includes('文件')) key = 'ls';
+        else if (t.includes('创建') || t.includes('mkdir') || t.includes('目录')) key = 'mkdir';
+        else if (t.includes('写') || t.includes('write') || t.includes('hello')) key = 'write';
+        else if (t.includes('wft') || t.includes('打开') || t.includes('open')) key = 'wft';
       }
       const s = scenarios[key];
       if (!forcedKey) text = s.nl;
+      else text = s.nl;
 
-      // Human message
-      const humanId = 'hm-' + Date.now();
+      // Human
       msgs.innerHTML += `
-        <div class="msg user" id="${humanId}">
+        <div class="msg user">
           <div class="msg-avatar">👤</div>
           <div class="msg-body">
             <div class="msg-text">${escape(text)}</div>
           </div>
         </div>`;
 
-      // Agent thinking message
+      // Agent thinking
       const agentId = 'am-' + Date.now();
       msgs.innerHTML += `
         <div class="msg agent" id="${agentId}">
@@ -693,7 +576,7 @@
             <div class="msg-text">${escape(s.reply)}
               <div class="thinking">
                 <div class="thinking-dots"><span></span><span></span><span></span></div>
-                Calling wind-cli tool...
+                正在调用 wind-cli 工具...
               </div>
             </div>
           </div>
@@ -702,7 +585,7 @@
       if (!forcedKey) input.value = '';
       msgs.scrollTop = msgs.scrollHeight;
 
-      // After 1s, show tool result
+      // Tool result
       setTimeout(() => {
         const el = document.getElementById(agentId);
         if (!el) return;
@@ -716,13 +599,14 @@
             <div class="tool-call-body">
               <div class="tool-badge">✓ exit 0</div>
               <div class="tool-cmd">$ ${escape(s.cmd)}</div>
-              <div class="tool-result">${highlightJSON(s.result)}</div>
+              <div class="tool-ok">✓ 执行成功</div>
+              <div class="tool-json">${highlightJSON(s.result)}</div>
             </div>
           </div>`;
         msgs.scrollTop = msgs.scrollHeight;
       }, 1000);
 
-      // After 2s, show final response
+      // Final response
       setTimeout(() => {
         const el = document.getElementById(agentId);
         if (!el) return;
@@ -733,8 +617,8 @@
 
     function copyCmd(btn) {
       navigator.clipboard.writeText('irm https://github.com/wbyanclaw/wind-cli/releases/latest/download/install.ps1 | iex').then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 1500);
+        btn.textContent = '已复制!';
+        setTimeout(() => btn.textContent = '复制', 1500);
       });
     }
   </script>
