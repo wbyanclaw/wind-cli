@@ -1,8 +1,5 @@
 //! Platform abstraction layer
 
-use crate::errors::WindError;
-use std::path::PathBuf;
-
 /// Open a URI via the system default handler.
 /// P0: currently returns error if no handler found.
 pub fn open_uri(uri: &str) -> anyhow::Result<()> {
@@ -52,7 +49,3 @@ pub fn open_uri(uri: &str) -> anyhow::Result<()> {
     }
 }
 
-/// Get the active workspace root path.
-pub fn get_workspace_root() -> anyhow::Result<PathBuf> {
-    crate::config::get_workspace_root()
-}

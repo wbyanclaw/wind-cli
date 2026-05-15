@@ -1,4 +1,5 @@
 //! Command dispatcher
+#![allow(clippy::ptr_arg)]
 
 use crate::cli::{Cli, Command, ToolsCommand, WftAction, WikiAction};
 use crate::config::get_workspace_root;
@@ -442,7 +443,7 @@ fn cmd_extract(
     include_base64: bool,
     tabular: bool,
 ) -> anyhow::Result<serde_json::Value> {
-    use crate::extract::{magic, ExtractFormat};
+    use crate::extract::ExtractFormat;
 
     // Validate workspace path
     let root = crate::config::get_workspace_root()?;
@@ -452,7 +453,7 @@ fn cmd_extract(
     let metadata = std::fs::metadata(&safe)?;
     const SIZE_LIMIT: u64 = 10 * 1024 * 1024; // 10MB
     if metadata.len() > SIZE_LIMIT {
-        return Err(WindError::Usage(format!(
+        Err(WindError::Usage(format!(
             "file too large: {} bytes (max 10MB)",
             metadata.len()
         )))?;

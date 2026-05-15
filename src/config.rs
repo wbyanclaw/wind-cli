@@ -70,15 +70,3 @@ pub fn get_workspace_root() -> anyhow::Result<PathBuf> {
         .active_workspace
         .ok_or_else(|| WindError::NoActiveWorkspace.into())
 }
-
-/// Workspace data directory
-pub fn workspace_data_dir() -> anyhow::Result<PathBuf> {
-    if let Some(proj) = ProjectDirs::from("com", "wind", "wind") {
-        Ok(proj.data_dir().to_path_buf())
-    } else {
-        Err(WindError::ConfigPathUnwritable(
-            "unable to determine platform data directory".to_string(),
-        )
-        .into())
-    }
-}

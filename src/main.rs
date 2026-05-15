@@ -1,4 +1,5 @@
 //! wind CLI — entry point
+#![allow(unused)]
 
 mod app;
 mod cli;
@@ -10,7 +11,6 @@ mod tools;
 mod windlocal;
 mod workspace;
 
-use clap::Parser;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn main() {

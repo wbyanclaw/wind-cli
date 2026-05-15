@@ -10,6 +10,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 // Exit codes (i32, compatible with Unix conventions)
+#[allow(dead_code)]
 pub const EXIT_SUCCESS: i32 = 0;
 pub const EXIT_GENERAL: i32 = 1;       // general error
 pub const EXIT_USAGE: i32 = 2;        // argument/usage error
@@ -67,6 +68,7 @@ pub const ERR_IO: &str = "IO_ERROR";
 // =============================================================================
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum WindError {
     #[error("path traversal attempt detected")]
     PathTraversal,
@@ -261,6 +263,7 @@ pub struct ErrorDetail {
 }
 
 impl ErrorOutput {
+    #[allow(dead_code)]
     pub fn new(err: &WindError, trace_id: Option<String>) -> Self {
         Self {
             ok: false,

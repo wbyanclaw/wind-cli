@@ -6,7 +6,7 @@
 //! - wind tools call <name> --params <json>: 调用工具（含 --force 门控）
 
 use crate::cli::ToolsCommand;
-use crate::errors::{exit_with_error, WindError};
+use crate::errors::WindError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -405,7 +405,7 @@ fn cmd_tools_call(name: &str, params_json: Option<&str>, force: bool) -> anyhow:
         "ls" => {
             let path = params.get("path")
                 .and_then(|v| v.as_str())
-                .map(|p| std::path::PathBuf::from(p))
+                .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| std::path::PathBuf::from("."));
             crate::app::cmd_ls(&path)
         }

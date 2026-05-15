@@ -57,7 +57,7 @@ pub fn extract(
     let size_bytes = data.len() as u64;
 
     // Detect format
-    let (format, confidence, detected_data) =
+    let (format, confidence, _detected_data) =
         magic::detect_format(&data, path.extension().and_then(|e| e.to_str()), force_format)?;
 
     // Dispatch to format-specific extractor

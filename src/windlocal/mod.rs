@@ -93,7 +93,7 @@ pub fn parse(uri: &str) -> anyhow::Result<WindAction> {
                 id: parse_command_action(params)?,
             })
         }
-        other => Err(WindError::InvalidActionType).map_err(Into::into),
+        _other => Err(Into::into(WindError::InvalidActionType)),
     }
 }
 

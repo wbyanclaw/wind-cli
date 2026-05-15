@@ -1,4 +1,5 @@
 //! CLI argument definitions — clap only, no business logic
+#![allow(clippy::ptr_arg)]
 
 use clap::{Parser, Subcommand};
 

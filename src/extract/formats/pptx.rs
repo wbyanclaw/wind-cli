@@ -17,7 +17,7 @@ pub fn extract(data: &[u8]) -> Value {
     };
 
     let mut slides: Vec<Value> = Vec::new();
-    let slide_count;
+    
 
     // Collect slide files
     let mut slide_files: Vec<String> = Vec::new();
@@ -33,7 +33,7 @@ pub fn extract(data: &[u8]) -> Value {
 
     // Sort by slide number
     slide_files.sort();
-    slide_count = slide_files.len();
+    let slide_count = slide_files.len();
 
     for slide_path in slide_files {
         let mut slide_xml = String::new();

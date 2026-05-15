@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 /// Extract image metadata and optionally base64 content
 pub fn extract(data: &[u8], include_base64: bool) -> Value {
     // Decode image to get metadata
-    let reader = image::io::Reader::new(std::io::Cursor::new(data));
+    let reader = image::ImageReader::new(std::io::Cursor::new(data));
 
     match reader.with_guessed_format() {
         Ok(reader) => {
