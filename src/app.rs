@@ -1,6 +1,6 @@
 //! Command dispatcher
 
-use crate::cli::{Cli, Command, ToolsCommand, WftAction};
+use crate::cli::{Cli, Command, ToolsCommand, WftAction, WikiAction};
 use crate::config::get_workspace_root;
 use crate::errors::{exit_with_error, WindError};
 use crate::tools;
@@ -30,6 +30,7 @@ pub fn run(cli: Cli) -> anyhow::Result<()> {
             cmd_extract(path, format.as_deref(), *include_base64, *tabular)
         }
         Command::Wft { action } => cmd_wft(action),
+        Command::Wiki { action } => cmd_wiki(action),
     };
 
     match result {
@@ -524,6 +525,46 @@ fn cmd_wft(action: &WftAction) -> anyhow::Result<serde_json::Value> {
         "message": "windlocal action dispatched to WFT",
         "action": action_json
     }))
+}
+
+fn cmd_wiki(action: &WikiAction) -> anyhow::Result<serde_json::Value> {
+    use crate::cli::WikiAction;
+    use tokio::runtime::Runtime;
+
+    let rt = Runtime::new()?;
+
+    match action {
+        WikiAction::Ingest { file } => {
+            let result = rt.block_on(async {
+                let config = wind_wiki::Config::load().unwrap_or_default();
+                let wiki = wind_wiki::Wiki::new(config).await?;
+                wiki.ingest(file.to_string_lossy().as_ref()).await
+            })?;
+            Ok(serde_json::to_value(result)?)
+        }
+        WikiAction::Query { question } => {
+            let result = rt.block_on(async {
+                let config = wind_wiki::Config::load().unwrap_or_default();
+                let wiki = wind_wiki::Wiki::new(config).await?;
+                wiki.query(question).await
+            })?;
+            Ok(serde_json::to_value(result)?)
+        }
+        WikiAction::Lint => {
+            let result = rt.block_on(async {
+                let config = wind_wiki::Config::load().unwrap_or_default();
+                let wiki = wind_wiki::Wiki::new(config).await?;
+                wiki.lint().await
+            })?;
+            Ok(serde_json::to_value(result)?)
+        }
+        WikiAction::Status => {
+            let config = wind_wiki::Config::load().unwrap_or_default();
+            let wiki = rt.block_on(wind_wiki::Wiki::new(config))?;
+            let status = wiki.status()?;
+            Ok(serde_json::to_value(status)?)
+        }
+    }
 }
 
 #[cfg(test)]

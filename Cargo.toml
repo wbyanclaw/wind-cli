@@ -35,6 +35,10 @@ zip = "2.1"         # ZIP archive reading (pptx is a zip of XML)
 roxmltree = "0.20" # XML parsing for PPTX slide text
 base64 = "0.22"    # Base64 encoding for image content
 
+# LLM Wiki SDK (publish to crates.io separately)
+wind-wiki = { path = "../wind-wiki" }
+tokio = { version = "1", features = ["rt"] }
+
 [dev-dependencies]
 assert_cmd = "2"
 predicates = "3"

@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(
     name = "wind",
-    about = "wind CLI — 受控 workspace 文件管理",
+    about = "wind CLI — 受控 workspace 文件管理 + LLM Wiki 知识库",
     version
 )]
 pub struct Cli {
@@ -143,6 +143,33 @@ pub enum Command {
         #[arg(long)]
         tabular: bool,
     },
+
+    /// LLM Wiki — 知识库管理（Ingest / Query / Lint / Status）
+    Wiki {
+        #[command(subcommand)]
+        action: WikiAction,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum WikiAction {
+    /// 将源文档 Ingest 到知识库
+    Ingest {
+        /// 源文件路径（支持 PDF / Markdown / HTML / TXT）
+        file: std::path::PathBuf,
+    },
+
+    /// 向知识库提问
+    Query {
+        /// 要问的问题
+        question: String,
+    },
+
+    /// 检查知识库健康状态（死链 / 重复 / 空文件）
+    Lint,
+
+    /// 显示知识库状态
+    Status,
 }
 
 #[derive(Subcommand, Debug, Clone)]
