@@ -118,25 +118,31 @@ AI: 已成功创建 notes/ 目录！
 
 **Architecture**:
 ```
-用户提问
-  ↓
-AI Agent（单次请求，同时检索）
-  ├── 知识库检索 → 本地 Wiki Markdown 索引（~/.local/share/wind/wiki/）
-  └── wind-cli 工作区 → 文件系统操作
-  ↓
-结果聚合 → 统一回复给用户
+wind-cli（统一入口）
+  └── wind wiki subcommands
+        ├── ingest   → Ingest Pipeline
+        ├── query   → Query Pipeline
+        └── lint    → Lint Pipeline
 ```
 
-**Implementation**:
-- Local Markdown files as knowledge source (pre-compiled index)
-- `windcli wiki query "Q1营收报告"` — fuzzy search titles/content → return relevant snippets
-- Integrated as 10th wind-cli tool: `WikiQuery { query: String }`
-- Can also be called via `windcli tools call wiki_query --params '{"query":"..."}'`
+**LLM Wiki SDK**: Independent Rust crate, published to crates.io.
+- `wind-cli` adds as `wind-wiki` Cargo dependency.
+- All Rust, controlled binary size.
 
-**Knowledge Base API**:
-- Endpoint: local HTTP server (e.g., `localhost:8765`)
-- Methods: `GET /search?q=...`, `GET /doc/{id}`
-- Also callable through wind-cli's `tools call` interface
+**Three directories**:
+```
+~/.local/share/wind/wiki/
+├── /raw         — Read-only source files (PDF, web pages, reports)
+├── /wiki        — AI-authored Markdown knowledge base ([[double-link]] cross-references)
+└── SYSTEM.md   — AI Agent behavior guidelines (system prompt)
+```
+
+**Three Pipelines**:
+- **Ingest**: New doc → AI reads → merges/links in /wiki
+- **Query**: User question → AI reads /wiki only → synthesized answer
+- **Lint**: Scheduled → AI audits /wiki → fixes dead links/contradictions
+
+**AI API config**: Independent (方案B) — LLM Wiki SDK has its own AI config, separately configurable in demo page.
 
 ### 4. Protocol Flow Visualization
 
@@ -250,7 +256,10 @@ Output structured JSON for all tool results.
 | v1 | fb98f74 | Dark theme, button-based |
 | v2 | ec0afc6 | Dark theme, NL interface |
 | v3 | d24fd77 | Fintech light, Chinese, file tree, wiki |
-| **v4** | current | Fintech light, refined layout |
+| v4 | 7b8d15e | Fintech light, Tailwind + Lucide |
+| **v7** | 94cf15d | Tailwind, unified file tree (工作区+raw+wiki+SYSTEM.md), LLM Wiki pipeline |
+
+**Current**: v7 — Tailwind CSS + Lucide icons, fintech light theme, unified file tree with LLM Wiki structure
 
 URL: <https://github.com/wbyanclaw/wind-cli/blob/main/docs/wind-demo-mockup.html>
 
